@@ -1,5 +1,11 @@
+#ifndef BOARD_H
+#define BOARD_H
+
 #include <vector>
 #include <math.h>
+#include "misc.hpp"
+#include "move_tables.hpp"
+
 class Move{
 
     public:
@@ -46,3 +52,4 @@ class Board{
         // int binary_to_square(const long long binary);
         // std::vector<int> serialize_bb(long long bb);
 };
+#endif

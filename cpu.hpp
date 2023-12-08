@@ -1,5 +1,10 @@
+#ifndef CPU_H
+#define CPU_H
+
 #include <algorithm>
 #include <iostream>
+#include <map>
+#include "misc.hpp"
 #include "board.hpp"
 
 class cpu{
@@ -15,5 +20,8 @@ class cpu{
         double evaluate(Board board);
     
     private:
-        int count_bits(long long bb);
+        void init_tables();
+        std::map<long long, int> red_piece_map;
+        std::map<long long, int> black_piece_map;
 };
+#endif
