@@ -89,6 +89,7 @@ double cpu::minimax(Board board, int depth, double alpha, double beta, bool isMa
 }
 
 Move cpu::find_best_move(Board board){
+    std::cout << "calculating... \n";
     double bestVal = -INFINITY;
     double alpha = -INFINITY;
     double beta = INFINITY;
