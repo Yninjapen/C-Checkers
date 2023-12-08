@@ -99,7 +99,7 @@ void Board::print_board(){
 
 //takes in a Move object, and changes the board state accordingly
 void Board::push_move(Move move){
-   long long all = get_all_pieces();
+   const long long all = get_all_pieces();
 
    red_bb = move.reds;
    black_bb = move.blacks;
@@ -120,7 +120,7 @@ void Board::push_move(Move move){
 
 void Board::undo(){
    move_history.pop_back();
-   Move move = move_history[move_history.size() - 1];
+   const Move move = move_history[move_history.size() - 1];
    
    red_bb = move.reds;
    black_bb = move.blacks;
@@ -137,7 +137,7 @@ void Board::undo(){
 
 //generates all legal moves
 std::vector<Move> Board::gen_moves(){
-   unsigned long long empty = ~(red_bb | black_bb);
+   const unsigned long long empty = ~(red_bb | black_bb);
    std::vector<Move> moves;
    std::vector<Move> takes;
 
@@ -160,7 +160,7 @@ std::vector<Move> Board::gen_moves(){
          t = black_takes[black_locations[i]] & empty;
          o = black_moves[black_locations[i]] & red_bb;
          if (t && o){
-            int row = ceil((double)black_locations[i]/4);
+            row = ceil((double)black_locations[i]/4);
             int shift = 4 - (row%2);
             while(o){
                long long ls1b = o & -o;
@@ -185,13 +185,13 @@ std::vector<Move> Board::gen_moves(){
 
       //black king moves
       for (int i = 0; i < king_locations.size(); i++){
-         unsigned long long inverse_location = ~square_to_binary(king_locations[i]);
+         const unsigned long long inverse_location = ~square_to_binary(king_locations[i]);
 
          //black king south takes
          t = black_takes[king_locations[i]] & empty;
          o = black_moves[king_locations[i]] & red_bb;
          if (t && o){
-            int row = ceil((double)king_locations[i]/4);
+            row = ceil((double)king_locations[i]/4);
             int shift = 4 - (row%2);
             while(o){
                long long ls1b = o & -o;
@@ -208,7 +208,7 @@ std::vector<Move> Board::gen_moves(){
          t = red_takes[king_locations[i]] & empty;
          o = red_moves[king_locations[i]] & red_bb;
          if (t && o){
-            int row = ceil((double)king_locations[i]/4);
+            row = ceil((double)king_locations[i]/4);
             int shift = (row%2) + 3;
             while(o){
                long long ls1b = o & -o;
@@ -251,7 +251,7 @@ std::vector<Move> Board::gen_moves(){
          t = red_takes[red_locations[i]] & empty;
          o = red_moves[red_locations[i]] & black_bb;
          if (t && o){
-            int row = ceil((double)red_locations[i]/4);
+            row = ceil((double)red_locations[i]/4);
             int shift = (row%2) + 3;
             while(o){
                long long ls1b = o & -o;
@@ -276,13 +276,13 @@ std::vector<Move> Board::gen_moves(){
       }
 
       for (int i = 0; i < king_locations.size(); i++){
-         unsigned long long inverse_location = ~square_to_binary(king_locations[i]);
+         const unsigned long long inverse_location = ~square_to_binary(king_locations[i]);
 
          //red king north takes
          t = red_takes[king_locations[i]] & empty;
          o = red_moves[king_locations[i]] & black_bb;
          if (t && o){
-            int row = ceil((double)king_locations[i]/4);
+            row = ceil((double)king_locations[i]/4);
             int shift = (row%2) + 3;
             while(o){
                long long ls1b = o & -o;
@@ -299,7 +299,7 @@ std::vector<Move> Board::gen_moves(){
          t = black_takes[king_locations[i]] & empty;
          o = black_moves[king_locations[i]] & black_bb;
          if (t && o){
-            int row = ceil((double)king_locations[i]/4);
+            row = ceil((double)king_locations[i]/4);
             int shift = 4 - (row%2);
             while(o){
                long long ls1b = o & -o;
@@ -414,7 +414,7 @@ int Board::is_game_over(){
          return 1;
       }
       /*If both sides still have pieces, but there are no legal moves,
-      then the side who's turn it is to move loses */
+      then the side whos turn it is to move loses */
       if (turn){
          return 1;
       }
