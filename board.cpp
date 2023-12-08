@@ -119,6 +119,7 @@ void Board::push_move(Move move){
 }
 
 void Board::undo(){
+   turn = move_history[move_history.size() - 1].color;
    move_history.pop_back();
    const Move move = move_history[move_history.size() - 1];
    
@@ -131,7 +132,6 @@ void Board::undo(){
       has_takes = true;
    }
 
-   turn = !move.color;
    legal_moves = gen_moves();
 }
 
