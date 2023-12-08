@@ -10,7 +10,7 @@ class Move{
         bool is_take;
 
         Move(long long r = 0, long long b = 0, long long k = 0, int c = 0, bool take = false);
-        std::array<int, 2> get_move_info(const unsigned long long previous_pos);
+        void get_move_info(const unsigned long long previous_pos);
         long long get_end_square(const unsigned long long previous_pos);
 };
 

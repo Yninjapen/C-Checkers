@@ -31,12 +31,11 @@ double cpu::evaluate(Board board){
         }
         return 0;
     }
-    
-    const int red_pieces = count_bits(board.red_bb);
-    const int black_pieces = count_bits(board.black_bb);
-    const int total_pieces = red_pieces + black_pieces;
-    const int red_kings = count_bits(board.red_bb & board.king_bb);
-    const int black_kings = count_bits(board.black_bb & board.king_bb);
+    const double red_pieces = count_bits(board.red_bb);
+    const double black_pieces = count_bits(board.black_bb);
+    const double total_pieces = red_pieces + black_pieces;
+    const double red_kings = count_bits(board.red_bb & board.king_bb);
+    const double black_kings = count_bits(board.black_bb & board.king_bb);
 
     return (((red_pieces - black_pieces)/total_pieces) * .8 + ((red_kings - black_kings)/total_pieces) * .2) * eval_multiplier;
 }
@@ -52,6 +51,9 @@ double cpu::minimax(Board board, int depth, double alpha, double beta, bool isMa
     }
     if (board.game_over){
         return 0;
+    }
+    if (depth == 0){
+        return score;
     }
 
     if (isMaximizingPlayer){

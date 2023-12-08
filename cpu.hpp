@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <iostream>
-#include "board.hpp" //split things up more idk
+#include "board.hpp"
 class cpu{
     int max_depth;
     int color;

@@ -99,7 +99,6 @@ void Board::print_board(){
 
 //takes in a Move object, and changes the board state accordingly
 void Board::push_move(Move move){
-   move.get_move_info(get_all_pieces());
    long long all = get_all_pieces();
 
    red_bb = move.reds;
@@ -327,9 +326,9 @@ std::vector<Move> Board::gen_moves(){
 
    //if there are takes, return them instead of the regular moves
    if (has_takes){
-      std::cout << "printing " << takes.size() << " takes:\n";
-      for (int i = 0; i < takes.size(); i++){takes[i].get_move_info(get_all_pieces());}
-      std::cout << "done printing takes \n";
+      // std::cout << "printing " << takes.size() << " takes:\n";
+      // for (int i = 0; i < takes.size(); i++){takes[i].get_move_info(get_all_pieces());}
+      // std::cout << "done printing takes \n";
       return takes;
    }
    return moves;
@@ -440,7 +439,7 @@ long long Move::get_end_square(const unsigned long long previous_pos){
 }
 
 //returns the start and end squares of the move as an array
-std::array<int, 2> Move::get_move_info(unsigned long long previous_pos){
+void Move::get_move_info(unsigned long long previous_pos){
    long long start = previous_pos & ~(reds | blacks);
    long long middle = 0;
    long long end = (reds | blacks) & ~previous_pos;
@@ -475,5 +474,4 @@ std::array<int, 2> Move::get_move_info(unsigned long long previous_pos){
 
    std::array<int, 2> result = {binary_to_square(start), binary_to_square(end)};
    std::cout << "\n";
-   return result;
 }

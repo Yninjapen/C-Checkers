@@ -5,7 +5,7 @@ int main(){
     Board board;
     int x;
     int player_turn = 0;
-    cpu CPU(1, 5);
+    cpu CPU(1, 10);
 
     while(!board.game_over){
         board.print_board();
