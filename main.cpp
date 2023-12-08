@@ -1,11 +1,12 @@
 #include <iostream>
-#include "headers.hpp"
+#include "cpu.hpp"
+#include "board.hpp"
 
 int main(){
     Board board;
     int x;
-    int player_turn = 0;
-    cpu CPU(1, 10);
+    int player_turn = 1;
+    cpu cpu1(1 - player_turn, 12);
 
     while(!board.game_over){
         board.print_board();
@@ -21,9 +22,12 @@ int main(){
                 Move m = board.legal_moves[x];
                 board.push_move(m);
             }
+            else if (board.move_history.size() > 1){
+                board.undo();
+            }
         }
         else{
-            Move m = CPU.find_best_move(board);
+            Move m = cpu1.find_best_move(board);
             board.push_move(m);
         }
     }

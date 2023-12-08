@@ -7,13 +7,10 @@ void print_binary(long long num){
 }
 
 int main(){
-    long long a = 0b101000000000;
-    long long b = 0b000001100000;
-    long long mask = 0b111110111111;
-    a = (a ^ b) & mask;
-    b ^= a;
-    a ^= b;
-
-    print_binary(a);
-    print_binary(b);
+    int a = 0;
+    a++;
+    int b = 5;
+    int c = 3;
+    double d = a / (b - c);
+    std::cout << d << "\n";
 }
