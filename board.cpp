@@ -1,10 +1,7 @@
 #include <iostream>
-#include <array>
 #include <bitset>
 #include <random>
 #include "board.hpp"
-#include "move_tables.hpp"
-#include "misc.hpp"
 
 /* Bitboard configuration
     29    30    31    32
@@ -62,6 +59,13 @@ void Board::print_board(){
          if (!arr[i - x]){
             std::cout << " ";
          }
+      }
+      std::cout << "   ";
+      for (int x = 3; x >= 0; x--){
+         if (i - x + 1< 10){
+            std::cout << "0";
+         }
+         std::cout << i - x + 1<< "  ";
       }
    }
    std::cout << "\n";
