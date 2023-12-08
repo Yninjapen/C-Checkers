@@ -37,7 +37,7 @@ double cpu::evaluate(Board board){
     const double red_kings = count_bits(board.red_bb & board.king_bb);
     const double black_kings = count_bits(board.black_bb & board.king_bb);
 
-    return (((red_pieces - black_pieces)/total_pieces) * .8 + ((red_kings - black_kings)/total_pieces) * .2) * eval_multiplier;
+    return (((red_pieces - black_pieces)/total_pieces) * 12 + ((red_kings - black_kings)/total_pieces) * 3) * eval_multiplier;
 }
 
 double cpu::minimax(Board board, int depth, double alpha, double beta, bool isMaximizingPlayer){

@@ -461,17 +461,23 @@ void Move::get_move_info(unsigned long long previous_pos){
       }
    }
 
-   std::cout << "Start: expected square is " << binary_to_square(start) << ", binary is: ";
-   print_binary(start);
-
    if (middle){
-      std::cout << "Taken: expected square is " << binary_to_square(middle) << ", binary is: ";
-      print_binary(middle);
+      std::cout << binary_to_square(start) << "-" << binary_to_square(middle) << "-" << binary_to_square(end);
    }
+   else{
+      std::cout << binary_to_square(start) << "-" << binary_to_square(end);
+   }
+   // std::cout << "Start: expected square is " << binary_to_square(start) << ", binary is: ";
+   // print_binary(start);
 
-   std::cout << "End: expected square is " << binary_to_square(end) << ", binary is: ";
-   print_binary(end);
+   // if (middle){
+   //    std::cout << "Taken: expected square is " << binary_to_square(middle) << ", binary is: ";
+   //    print_binary(middle);
+   // }
 
-   std::array<int, 2> result = {binary_to_square(start), binary_to_square(end)};
-   std::cout << "\n";
+   // std::cout << "End: expected square is " << binary_to_square(end) << ", binary is: ";
+   // print_binary(end);
+
+   // std::array<int, 2> result = {binary_to_square(start), binary_to_square(end)};
+   // std::cout << "\n";
 }

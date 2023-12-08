@@ -10,13 +10,16 @@ int main(){
     while(!board.game_over){
         board.print_board();
         if (board.turn == player_turn){
-            std::cin >> x;
-            if (x == 1){
-                Move m = board.get_random_move();
-                board.push_move(m);
+            for (int i = 0; i < board.legal_moves.size(); i++){
+                std::cout << i << ": ";
+                board.legal_moves[i].get_move_info(board.get_all_pieces());
+                std::cout << ", ";
             }
-            if ((x == 2) && board.move_history.size() > 1){
-                board.undo();
+            std::cout << "\n";
+            std::cin >> x;
+            if ((0 <= x) && (x < board.legal_moves.size())){
+                Move m = board.legal_moves[x];
+                board.push_move(m);
             }
         }
         else{
@@ -26,10 +29,10 @@ int main(){
     }
 
     board.print_board();
-    if (board.game_over = 1){
+    if (board.game_over == 1){
         std::cout << "Red wins\n";
     }
-    else if (board.game_over = 2){
+    else if (board.game_over == 2){
         std::cout << "Black wins\n";
     }
     else{
