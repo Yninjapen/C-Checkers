@@ -5,23 +5,28 @@ cpu::cpu(int cpu_color, int cpu_depth){
     opponent = 1 - color;
     max_depth = cpu_depth;
     eval_multiplier = opponent * 2 - 1;
+    std::cout << eval_multiplier;
 }
 
-//returns the nubmer of 1 bits in a bitboard
-//aka the "Hamming Weight"
-int cpu::count_bits(long long bb){
-    int count = 0;
-    while(bb){
-        long long ls1b = bb & -bb;
-        count++;
-        bb&= bb-1;
+//Initializes all the tables necessary for evaluation.
+//Called only once, when the cpu is initialized.
+void cpu::init_tables(){
+    //initialize piece_map
+    for (int i = 1; i <= 32; i++){
+        long long bin = square_to_binary(i); //every square initially gets a value from 1-8 based on
+        int row = ceil((double)i/4);         //its row, and a bonus of +1 is given for being on the edge
+        red_piece_map[bin] = row; 
+        black_piece_map[bin] = 9 - row;      //this is reversed for black, so for black row 8 has a value of 1
+        if ((i%4 == 0) || (i%4 == 1)){
+            red_piece_map[bin] += 1;         //I don't actually know if the edge bonus is good, just my opinion
+            black_piece_map[bin] += 1;
+        }
     }
-    return count;
 }
 
 //returns the cpu's evaluation of the position
 double cpu::evaluate(Board board){
-    int result = board.game_over;
+    const int result = board.game_over;
     if (result){
         if (result == color + 1){
             return 1000;
@@ -31,17 +36,55 @@ double cpu::evaluate(Board board){
         }
         return 0;
     }
-    const double red_pieces = count_bits(board.red_bb);
-    const double black_pieces = count_bits(board.black_bb);
-    const double total_pieces = red_pieces + black_pieces;
-    const double red_kings = count_bits(board.red_bb & board.king_bb);
-    const double black_kings = count_bits(board.black_bb & board.king_bb);
 
-    return (((red_pieces - black_pieces)/total_pieces) * 12 + ((red_kings - black_kings)/total_pieces) * 3) * eval_multiplier;
+    unsigned long long temp_red = board.red_bb;
+    unsigned long long temp_black = board.black_bb;
+
+    int red_piece_count = 0;
+    int red_king_count = 0;
+    int black_piece_count = 0;
+    int black_king_count = 0;
+
+    double red_pos_val = 0;
+    double black_pos_val = 0;
+
+    long long ls1b;
+    //gets relevent data for red pieces
+    while (temp_red){
+        ls1b = temp_red & -temp_red;
+        red_piece_count++;
+        if (ls1b & board.king_bb){
+            red_king_count++;
+        }
+        else{
+            red_pos_val += red_piece_map[ls1b];
+        }
+        temp_red &= temp_red-1;
+    }
+
+    //gets relevent data for black pieces
+    while (temp_black){
+        ls1b = temp_black & -temp_black;
+        black_piece_count++;
+        if (ls1b & board.king_bb){
+            black_king_count++;
+        }
+        else{
+            black_pos_val += black_piece_map[ls1b];
+        }
+        temp_black &= temp_black-1;
+    }
+
+    const double total_pieces = red_piece_count + black_piece_count;
+    const double piece_val = ((red_piece_count - black_piece_count)/total_pieces) * 12;
+    const double king_val = ((red_king_count - black_king_count)/total_pieces) * 6;
+    const double pos_val = (((red_pos_val / (red_piece_count - red_king_count)) - (black_pos_val / (black_piece_count - black_king_count)))/7) * 2;
+
+    return (piece_val + king_val + pos_val) * eval_multiplier;
 }
 
 double cpu::minimax(Board board, int depth, double alpha, double beta, bool isMaximizingPlayer){
-    double score = evaluate(board);
+    const double score = evaluate(board);
 
     if (score == 1000){
         return score - (max_depth - depth);
