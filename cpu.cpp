@@ -6,6 +6,7 @@ cpu::cpu(int cpu_color, int cpu_depth){
     max_depth = cpu_depth;
     eval_multiplier = opponent * 2 - 1;
     std::cout << eval_multiplier;
+    init_tables();
 }
 
 //Initializes all the tables necessary for evaluation.
@@ -27,7 +28,7 @@ void cpu::init_tables(){
 //returns the cpu's evaluation of the position
 double cpu::evaluate(Board board){
     const int result = board.game_over;
-    if (result){
+    if (result != 0){
         if (result == color + 1){
             return 1000;
         }
@@ -75,16 +76,17 @@ double cpu::evaluate(Board board){
         temp_black &= temp_black-1;
     }
 
-    const double total_pieces = red_piece_count + black_piece_count;
-    const double piece_val = ((red_piece_count - black_piece_count)/total_pieces) * 12;
-    const double king_val = ((red_king_count - black_king_count)/total_pieces) * 6;
-    const double pos_val = (((red_pos_val / (red_piece_count - red_king_count)) - (black_pos_val / (black_piece_count - black_king_count)))/7) * 2;
+    double total_pieces = red_piece_count + black_piece_count;
+    double piece_val = ((red_piece_count - black_piece_count)/total_pieces) * 12;
+    double king_val = ((red_king_count - black_king_count)/total_pieces) * 6;
+    double pos_val = (((red_pos_val / (red_piece_count - red_king_count + 1)) - (black_pos_val / (black_piece_count - black_king_count + 1)))/7) * 2;
 
     return (piece_val + king_val + pos_val) * eval_multiplier;
 }
 
-double cpu::minimax(Board board, int depth, double alpha, double beta, bool isMaximizingPlayer){
-    const double score = evaluate(board);
+//performs a recursive minimax search
+double cpu::minimax(Board board, int depth, double alpha, double beta){
+    double score = evaluate(board);
 
     if (score == 1000){
         return score - (max_depth - depth);
@@ -99,12 +101,13 @@ double cpu::minimax(Board board, int depth, double alpha, double beta, bool isMa
         return score;
     }
 
-    if (isMaximizingPlayer){
+    if (board.turn == color){
         double bestVal = -INFINITY;
         std::vector<Move> legal_moves = board.legal_moves;
         for (int i = 0; i < legal_moves.size(); i++){
             board.push_move(legal_moves[i]);
-            bestVal = std::max(bestVal, minimax(board, depth - 1, alpha, beta, !isMaximizingPlayer));
+
+            bestVal = std::max(bestVal, minimax(board, depth - 1, alpha, beta));
             alpha = std::max(alpha, bestVal);
             board.undo();
 
@@ -119,7 +122,8 @@ double cpu::minimax(Board board, int depth, double alpha, double beta, bool isMa
         std::vector<Move> legal_moves = board.legal_moves;
         for (int i = 0; i < legal_moves.size(); i++){
             board.push_move(legal_moves[i]);
-            bestVal = std::min(bestVal, minimax(board, depth - 1, alpha, beta, !isMaximizingPlayer));
+
+            bestVal = std::min(bestVal, minimax(board, depth - 1, alpha, beta));
             beta = std::min(beta, bestVal);
             board.undo();
 
@@ -131,6 +135,10 @@ double cpu::minimax(Board board, int depth, double alpha, double beta, bool isMa
     }
 }
 
+/*
+Perfoms a minimax search up to the max_depth of the cpu
+and returns the best move.
+*/
 Move cpu::find_best_move(Board board){
     std::cout << "calculating... \n";
     double bestVal = -INFINITY;
@@ -142,7 +150,7 @@ Move cpu::find_best_move(Board board){
 
     for (int i = 0; i < legal_moves.size(); i++){
         board.push_move(legal_moves[i]);
-        moveVal = minimax(board, max_depth, alpha, beta, false);
+        moveVal = minimax(board, max_depth, alpha, beta);
 
         if (moveVal > bestVal){
             bestVal = moveVal;

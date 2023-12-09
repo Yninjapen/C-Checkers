@@ -16,7 +16,7 @@ class cpu{
     public:
         cpu(int cpu_color, int cpu_depth);
         Move find_best_move(Board board);
-        double minimax(Board board, int depth, double alpha, double beta, bool isMaximizingPlayer);
+        double minimax(Board board, int depth, double alpha, double beta);
         double evaluate(Board board);
     
     private:
