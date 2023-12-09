@@ -42,3 +42,9 @@ std::vector<int> serialize_bb(long long bb){
 void print_binary(long long num){
    std::cout << std::bitset<32>(num) << "\n";
 }
+
+//hashes the bitboard
+unsigned int hash_bb(unsigned long long reds, unsigned long long blacks, unsigned long long kings, int turn){
+   const unsigned int hash = ((reds * 37 + blacks) * 37 + kings) * 37 + turn;
+   return hash;
+}
