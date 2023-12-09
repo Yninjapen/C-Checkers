@@ -41,6 +41,7 @@ void Board::print_board(){
    long long black_pieces = black_bb & ~king_bb;
    std::vector<int> v;
 
+   for (int i = 0; i <=32; i++){arr[i] = '-';}
    v = serialize_bb(red_kings);for(int i = 0; i < v.size(); i++){arr[v[i] - 1] = 'R';}
    v = serialize_bb(red_pieces);for(int i = 0; i < v.size(); i++){arr[v[i] - 1] = 'r';}
    v = serialize_bb(black_kings);for(int i = 0; i < v.size(); i++){arr[v[i] - 1] = 'B';}
@@ -84,7 +85,9 @@ void Board::push_move(Move move){
       has_takes = true;
       turn = !turn;
    }
-
+   else if (king_bb){ //since checkers positions can only be repeated if there are kings, if there are no kings,
+      pos_history[hash_bb(red_bb, black_bb, king_bb, !turn)] += 1;//we dont even need to track the position
+   }
 
    turn = !turn;
    legal_moves = gen_moves();
@@ -97,14 +100,21 @@ void Board::undo(){
    move_history.pop_back();
    const Move move = move_history[move_history.size() - 1];
    
-   red_bb = move.reds;
-   black_bb = move.blacks;
-   king_bb = move.kings;
-
    has_takes = false;
    if (move.is_take){
       has_takes = true;
    }
+
+   else if (king_bb){
+      unsigned int hash = hash_bb(red_bb, black_bb, king_bb, !turn);
+      if (pos_history[hash] == 1){
+         pos_history.erase(hash);
+      }
+   }
+
+   red_bb = move.reds;
+   black_bb = move.blacks;
+   king_bb = move.kings;
 
    legal_moves = gen_moves();
 }
@@ -396,6 +406,11 @@ int Board::is_game_over(){
          return 2;
       }
    }
+
+   if (king_bb && (pos_history[hash_bb(red_bb, black_bb, king_bb, turn)] >= 3)){
+      return -1;
+   }
+
    return 0;//otherwise, the game is not over
 }
 
