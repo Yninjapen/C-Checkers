@@ -5,12 +5,13 @@
 int main(){
     Board board;
     int x;
-    int player_turn = 1;
-    cpu cpu1(1 - player_turn, 12);
+    int player_color = 1; //0 == red, 1 == black
+    int cpu_depth = 10;
+    cpu cpu1(1 - player_color, cpu_depth);
 
     while(!board.game_over){
         board.print_board();
-        if (board.turn == player_turn){
+        if (board.turn == player_color){
             for (int i = 0; i < board.legal_moves.size(); i++){
                 std::cout << i << ": ";
                 board.legal_moves[i].get_move_info(board.get_all_pieces());
