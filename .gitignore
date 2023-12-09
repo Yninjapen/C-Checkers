@@ -1,2 +1,7 @@
 /.vscode
 *.exe
+original_cpu.cpp
+original_cpu.hpp
+cpu_comparison.cpp
+new_cpu.cpp
+new_cpu.hpp
