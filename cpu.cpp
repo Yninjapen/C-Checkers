@@ -31,6 +31,11 @@ void cpu::set_color(int new_color){
     eval_multiplier = opponent * 2 - 1;
 }
 
+//sets the depth of the cpu
+void cpu::set_depth(int new_depth){
+    max_depth = new_depth;
+}
+
 //returns the cpu's evaluation of the position
 double cpu::evaluate(Board board){
     const int result = board.game_over;
@@ -145,8 +150,10 @@ double cpu::minimax(Board board, int depth, double alpha, double beta){
 Perfoms a minimax search up to the max_depth of the cpu
 and returns the best move.
 */
-Move cpu::find_best_move(Board board){
-    std::cout << "calculating... \n";
+Move cpu::find_best_move(Board board, bool feedback){
+    if (feedback){
+        std::cout << "calculating... \n";
+    }
     double bestVal = -INFINITY;
     double alpha = -INFINITY;
     double beta = INFINITY;
@@ -167,6 +174,8 @@ Move cpu::find_best_move(Board board){
         board.undo();
     }
 
-    std::cout << "The best move has a value of " << bestVal;
+    if (feedback){
+        std::cout << "The best move has a value of " << bestVal;
+    }
     return bestMove;
 }

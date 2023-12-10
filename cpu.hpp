@@ -10,16 +10,17 @@
 
 class cpu{
     int max_depth;
-    int color;
     int opponent;
     int eval_multiplier;
 
     public:
+        int color;
         cpu(int cpu_color = 0, int cpu_depth = 10);
-        Move find_best_move(Board board);
+        Move find_best_move(Board board, bool feedback = true);
         double minimax(Board board, int depth, double alpha, double beta);
         double evaluate(Board board);
         void set_color(int new_color);
+        void set_depth(int new_depth);
     
     private:
         void init_tables();
