@@ -158,13 +158,14 @@ std::vector<Move> Board::gen_moves(){
          }
 
          //black piece non-takes
-         if (!has_takes){}
+         if (!has_takes){
             bb = black_moves[black_locations[i]] & empty;
             while (bb){
                long long ls1b = bb & -bb;
                moves.push_back(Move(red_bb, (black_bb & ~square_to_binary(black_locations[i])) | ls1b, (ls1b & black_promotion_mask) | king_bb, 1));
                bb &= bb-1;
             }
+         }
       }
 
       //black king moves
