@@ -26,6 +26,7 @@ Board::Board(){
    Move initial_pos(4095, 4293918720, 0, 1);
    move_history.push_back(initial_pos);
 
+   movecount = 0;
    game_over = 0;
 }
 
@@ -76,6 +77,7 @@ void Board::print_board(){
 //takes in a Move object, and changes the board state accordingly
 void Board::push_move(Move move){
    const long long all = get_all_pieces();
+   movecount++;
 
    red_bb = move.reds;
    black_bb = move.blacks;
@@ -99,6 +101,7 @@ void Board::push_move(Move move){
 }
 
 void Board::undo(){
+   movecount--;
    turn = move_history[move_history.size() - 1].color;
    move_history.pop_back();
    const Move move = move_history[move_history.size() - 1];

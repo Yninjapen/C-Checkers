@@ -34,6 +34,7 @@ class Board{
         unsigned long long red_bb;
         unsigned long long black_bb;
         unsigned long long king_bb;
+        int movecount;
         int turn;
         Board();
 
