@@ -150,7 +150,7 @@ std::vector<Move> Board::gen_moves(){
                long long ls1b = o & -o;
                mask = ((ls1b | (ls1b >> 1)) >> shift) & t;
                if (mask){
-                  takes.push_back(Move(red_bb & ~ls1b, (black_bb & ~square_to_binary(black_locations[i])) | (mask & -mask), (mask & black_promotion_mask) | king_bb & ~ls1b, 1, true));
+                  takes.push_back(Move(red_bb & ~ls1b, (black_bb & ~square_to_binary(black_locations[i])) | (mask & -mask), ((mask & black_promotion_mask) | king_bb) & ~ls1b, 1, true));
                   has_takes = true;
                }
                o &= o-1;
@@ -182,7 +182,7 @@ std::vector<Move> Board::gen_moves(){
                long long ls1b = o & -o;
                mask = ((ls1b | (ls1b >> 1)) >> shift) & t;
                if (mask){
-                  takes.push_back(Move(red_bb & ~ls1b, (black_bb & inverse_location) | (mask & -mask), ((king_bb & inverse_location) | (mask & -mask)) | king_bb & ~ls1b, 1, true));
+                  takes.push_back(Move(red_bb & ~ls1b, (black_bb & inverse_location) | (mask & -mask), ((king_bb & inverse_location) | (mask & -mask)) & ~ls1b, 1, true));
                   has_takes = true;
                }
                o &= o-1;
@@ -199,7 +199,7 @@ std::vector<Move> Board::gen_moves(){
                long long ls1b = o & -o;
                mask = ((ls1b | (ls1b << 1)) << shift) & t;
                if (mask){
-                  takes.push_back(Move(red_bb & ~ls1b, (black_bb & inverse_location) | (mask & -mask), ((king_bb & inverse_location) | (mask & -mask)) | king_bb & ~ls1b, 1, true));
+                  takes.push_back(Move(red_bb & ~ls1b, (black_bb & inverse_location) | (mask & -mask), ((king_bb & inverse_location) | (mask & -mask)) & ~ls1b, 1, true));
                   has_takes = true;
                }
                o &= o-1;
@@ -242,7 +242,7 @@ std::vector<Move> Board::gen_moves(){
                long long ls1b = o & -o;
                mask = ((ls1b | (ls1b << 1)) << shift) & t;
                if (mask){
-                  takes.push_back(Move((red_bb & ~square_to_binary(red_locations[i])) | (mask & -mask), black_bb & ~ls1b, (mask & red_promotion_mask) | king_bb & ~ls1b, 0, true));
+                  takes.push_back(Move((red_bb & ~square_to_binary(red_locations[i])) | (mask & -mask), black_bb & ~ls1b, ((mask & red_promotion_mask) | king_bb) & ~ls1b, 0, true));
                   has_takes = true;
                }
                o &= o-1;
@@ -273,7 +273,7 @@ std::vector<Move> Board::gen_moves(){
                long long ls1b = o & -o;
                mask = ((ls1b | (ls1b << 1)) << shift) & t;
                if (mask){
-                  takes.push_back(Move((red_bb & inverse_location) | (mask & -mask), black_bb & ~ls1b, ((king_bb & inverse_location) | (mask & -mask)) | king_bb & ~ls1b, 0, true));
+                  takes.push_back(Move((red_bb & inverse_location) | (mask & -mask), black_bb & ~ls1b, ((king_bb & inverse_location) | (mask & -mask)) & ~ls1b, 0, true));
                   has_takes = true;
                }
                o &= o-1;
@@ -290,7 +290,7 @@ std::vector<Move> Board::gen_moves(){
                long long ls1b = o & -o;
                mask = ((ls1b | (ls1b >> 1)) >> shift) & t;
                if (mask){
-                  takes.push_back(Move((red_bb & inverse_location) | (mask & -mask), black_bb & ~ls1b, ((king_bb & inverse_location) | (mask & -mask)) | king_bb & ~ls1b, 0, true));
+                  takes.push_back(Move((red_bb & inverse_location) | (mask & -mask), black_bb & ~ls1b, ((king_bb & inverse_location) | (mask & -mask)) & ~ls1b, 0, true));
                   has_takes = true;
                }
                o &= o-1;
