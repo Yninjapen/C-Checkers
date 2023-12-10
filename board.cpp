@@ -1,6 +1,7 @@
 #include <iostream>
 #include <bitset>
 #include <random>
+#include <time.h>
 #include "board.hpp"
 
 /* Bitboard configuration
@@ -381,9 +382,19 @@ bool Board::can_jump(long long piece, int color){
    return false;
 }
 
+//returns a random legal move
+//NOTE: I'm not entirely sure if this works its a little iffy for some reason
 Move Board::get_random_move(){
+   srand(time(NULL));
    int index = rand() % legal_moves.size();
    return legal_moves[index];
+}
+
+//sets the board to a random position by playing a "moves_to_play" random moves
+void Board::set_random_pos(int moves_to_play){
+   for (int i = 0; i < moves_to_play; i++){
+      push_move(get_random_move());
+   }
 }
 
 /*Returns an int that represents the result.

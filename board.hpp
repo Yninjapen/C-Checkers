@@ -43,6 +43,7 @@ class Board{
         std::vector<Move> legal_moves;
         std::vector<Move> move_history;
         Move get_random_move();
+        void set_random_pos(int moves_to_play);
         void push_move(Move move);
         void undo();
 
