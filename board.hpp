@@ -4,6 +4,7 @@
 #include <vector>
 #include <math.h>
 #include <map>
+#include <unordered_map>
 #include "misc.hpp"
 #include "move_tables.hpp"
 
@@ -26,7 +27,7 @@ class Board{
     const unsigned long long red_promotion_mask = 0b11110000000000000000000000000000;
     const unsigned long long black_promotion_mask = 0b00000000000000000000000000001111;
     bool has_takes;
-    std::map<unsigned int, int> pos_history;
+    std::unordered_map<unsigned int, int> pos_history;
     const int repetition_limit = 3; //the number of times a position can be repeated before the game is considered a draw
 
     public:

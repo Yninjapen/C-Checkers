@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <iostream>
 #include <map>
+#include <unordered_map>
 #include "misc.hpp"
 #include "board.hpp"
 
@@ -21,7 +22,7 @@ class cpu{
     
     private:
         void init_tables();
-        std::map<long long, int> red_piece_map;
-        std::map<long long, int> black_piece_map;
+        std::unordered_map<long long, int> red_piece_map;
+        std::unordered_map<long long, int> black_piece_map;
 };
 #endif
