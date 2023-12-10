@@ -15,10 +15,11 @@ class cpu{
     int eval_multiplier;
 
     public:
-        cpu(int cpu_color, int cpu_depth);
+        cpu(int cpu_color = 0, int cpu_depth = 10);
         Move find_best_move(Board board);
         double minimax(Board board, int depth, double alpha, double beta);
         double evaluate(Board board);
+        void set_color(int new_color);
     
     private:
         void init_tables();

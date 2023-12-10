@@ -5,7 +5,6 @@ cpu::cpu(int cpu_color, int cpu_depth){
     opponent = 1 - color;
     max_depth = cpu_depth;
     eval_multiplier = opponent * 2 - 1;
-    std::cout << eval_multiplier;
     init_tables();
 }
 
@@ -23,6 +22,13 @@ void cpu::init_tables(){
             black_piece_map[bin] += 1;
         }
     }
+}
+
+//changes the color that the cpu plays for
+void cpu::set_color(int new_color){
+    color = new_color;
+    opponent = 1 - color;
+    eval_multiplier = opponent * 2 - 1;
 }
 
 //returns the cpu's evaluation of the position
