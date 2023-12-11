@@ -72,6 +72,25 @@ void Board::print_board(){
       }
    }
    std::cout << "\n";
+   if (!game_over){
+      if (turn == 0){
+         std::cout << "Red to move\n";
+      }
+      else{
+         std::cout << "Black to move\n";
+      }
+   }
+   else{
+      if (game_over == 1){
+        std::cout << "Red wins\n";
+      }
+      else if (game_over == 2){
+         std::cout << "Black wins\n";
+      }
+      else{
+         std::cout << "Its a draw\n";
+      }
+   }
 }
 
 //takes in a Move object, and changes the board state accordingly
@@ -424,7 +443,7 @@ int Board::is_game_over(){
       }
    }
 
-   if (king_bb && (pos_history[hash_bb(red_bb, black_bb, king_bb, turn)] >= 3)){
+   if (king_bb && (pos_history[hash_bb(red_bb, black_bb, king_bb, turn)] >= repetition_limit)){
       return -1;
    }
 
