@@ -3,5 +3,6 @@
 original_cpu.cpp
 original_cpu.hpp
 cpu_comparison.cpp
+cpu_comparison.hpp
 new_cpu.cpp
 new_cpu.hpp
