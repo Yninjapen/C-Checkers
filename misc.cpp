@@ -48,3 +48,8 @@ unsigned int hash_bb(unsigned long long reds, unsigned long long blacks, unsigne
    const unsigned int hash = ((reds * 37 + blacks) * 37 + kings) * 37 + turn;
    return hash;
 }
+
+//returns time in milliseconds
+double get_time(){
+   return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
