@@ -193,7 +193,7 @@ void cpu::manage_time(){
 }
 
 /*
-Finds the best move, but is limited by a time limit t(milliseconds)
+Finds the best move, but is limited by a time limit t(seconds)
 */
 Move cpu::time_search(Board board, double t_limit, bool feedback){
     if (feedback){
@@ -204,7 +204,7 @@ Move cpu::time_search(Board board, double t_limit, bool feedback){
     Move bestMove;
 
     search_cancelled = false;
-    time_limit = t_limit;
+    time_limit = t_limit*1000;//converts seconds to milliseconds
     search_start = get_time();
     time_manager manager(*this);
 
