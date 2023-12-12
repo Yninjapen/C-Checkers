@@ -245,10 +245,10 @@ Move cpu::time_search(Board board, double t_limit, bool feedback){
             bestVal = score_map[i];
             bestMove = legal_moves[i];
         }
-        std::cout << "move " << i << ": value of " << score_map[i] << "\n";
     }
     if (feedback){
-        std::cout << "The best move has a value of " << bestVal << ", max depth reached was " << current_depth << "\n";
+        std::cout << "The best move has a value of " << bestVal << ", max depth reached was " << current_depth;
+        std::cout << ", time elapsed: " << get_time() - search_start << " milliseconds\n";
     }
     t1.join();
     return bestMove;
