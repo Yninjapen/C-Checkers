@@ -236,6 +236,9 @@ Move cpu::time_search(Board board, double t_limit, bool feedback){
             board.undo();
 
         }
+        if (abs(bestVal) > 100){
+            break;
+        }
         current_depth++;
     }
 
