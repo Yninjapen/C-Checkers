@@ -6,7 +6,7 @@ int main(){
     Board board;
     int x;
     int player_color = 1; //0 == red, 1 == black
-    int cpu_depth = 10;
+    int cpu_depth = 11;
     cpu cpu1(1 - player_color, cpu_depth);
 
     while(!board.game_over){
@@ -28,19 +28,10 @@ int main(){
             }
         }
         else{
-            Move m = cpu1.find_best_move(board);
+            Move m = cpu1.time_search(board, 1000);
             board.push_move(m);
         }
     }
 
     board.print_board();
-    if (board.game_over == 1){
-        std::cout << "Red wins\n";
-    }
-    else if (board.game_over == 2){
-        std::cout << "Black wins\n";
-    }
-    else{
-        std::cout << "Its a draw\n";
-    }
 }
