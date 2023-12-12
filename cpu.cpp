@@ -184,7 +184,7 @@ Move cpu::max_depth_search(Board board, bool feedback){
 }
 
 void cpu::manage_time(){
-    while(true){
+    while(!search_cancelled){
         if (get_time() - search_start > time_limit){
             search_cancelled = true;
             break;
@@ -210,8 +210,9 @@ Move cpu::time_search(Board board, double t_limit, bool feedback){
 
     std::thread t1(manager);
 
-    current_depth = 1;
+    current_depth = 0;
     while(!search_cancelled){
+        current_depth++;
         double bestVal = -INFINITY;
         double alpha = -INFINITY;
         double beta = INFINITY;
@@ -237,9 +238,9 @@ Move cpu::time_search(Board board, double t_limit, bool feedback){
 
         }
         if (abs(bestVal) > 100){
+            search_cancelled = true;
             break;
         }
-        current_depth++;
     }
 
     double bestVal = -INFINITY;
@@ -253,6 +254,7 @@ Move cpu::time_search(Board board, double t_limit, bool feedback){
         std::cout << "The best move has a value of " << bestVal << ", max depth reached was " << current_depth;
         std::cout << ", time elapsed: " << get_time() - search_start << " milliseconds\n";
     }
+
     t1.join();
     return bestMove;
 }   
