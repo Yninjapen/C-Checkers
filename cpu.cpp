@@ -4,6 +4,7 @@ cpu::cpu(int cpu_color, int cpu_depth){
     color = cpu_color;
     opponent = 1 - color;
     max_depth = cpu_depth;
+    current_depth = max_depth;
     eval_multiplier = opponent * 2 - 1;
     init_tables();
 }
@@ -100,15 +101,15 @@ double cpu::minimax(Board board, int depth, double alpha, double beta){
     double score = evaluate(board);
 
     if (score == 1000){
-        return score - (max_depth - depth);
+        return score - (current_depth - depth);
     }
     if (score == -1000){
-        return score + (max_depth - depth);
+        return score + (current_depth - depth);
     }
     if (board.game_over){
         return 0;
     }
-    if (depth == 0){
+    if (depth == 0 || search_cancelled){
         return score;
     }
 
@@ -150,10 +151,12 @@ double cpu::minimax(Board board, int depth, double alpha, double beta){
 Perfoms a minimax search up to the max_depth of the cpu
 and returns the best move.
 */
-Move cpu::find_best_move(Board board, bool feedback){
+Move cpu::max_depth_search(Board board, bool feedback){
     if (feedback){
         std::cout << "calculating... \n";
     }
+
+    current_depth = max_depth;
     double bestVal = -INFINITY;
     double alpha = -INFINITY;
     double beta = INFINITY;
@@ -179,3 +182,74 @@ Move cpu::find_best_move(Board board, bool feedback){
     }
     return bestMove;
 }
+
+void cpu::manage_time(){
+    while(true){
+        if (get_time() - search_start > time_limit){
+            search_cancelled = true;
+            break;
+        }
+    }
+}
+
+/*
+Finds the best move, but is limited by a time limit t(milliseconds)
+*/
+Move cpu::time_search(Board board, double t_limit, bool feedback){
+    if (feedback){
+        std::cout << "calculating... \n";
+    }
+    std::vector<Move> legal_moves = board.legal_moves;
+    std::unordered_map<int, double> score_map;
+    Move bestMove;
+
+    search_cancelled = false;
+    time_limit = t_limit;
+    search_start = get_time();
+    time_manager manager(*this);
+
+    std::thread t1(manager);
+
+    current_depth = 1;
+    while(!search_cancelled){
+        double bestVal = -INFINITY;
+        double alpha = -INFINITY;
+        double beta = INFINITY;
+        double moveVal;
+
+        for (int i = 0; i < legal_moves.size(); i++){
+            board.push_move(legal_moves[i]);
+            moveVal = minimax(board, current_depth, alpha, beta);
+
+            if (!search_cancelled){
+                score_map[i] = moveVal;
+            }
+            else{
+                break;
+            }
+
+            if (moveVal > bestVal){
+                bestVal = moveVal;
+            }
+
+            alpha = std::max(alpha, bestVal);
+            board.undo();
+
+        }
+        current_depth++;
+    }
+
+    double bestVal = -INFINITY;
+    for (int i = 0; i < legal_moves.size(); i++){
+        if (score_map[i] > bestVal){
+            bestVal = score_map[i];
+            bestMove = legal_moves[i];
+        }
+        std::cout << "move " << i << ": value of " << score_map[i] << "\n";
+    }
+    if (feedback){
+        std::cout << "The best move has a value of " << bestVal << ", max depth reached was " << current_depth << "\n";
+    }
+    t1.join();
+    return bestMove;
+}   
