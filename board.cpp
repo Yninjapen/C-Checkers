@@ -103,39 +103,40 @@ void Board::push_move(Move move){
    king_bb = move.kings;
 
    has_takes = false;
-   if (move.is_take){
-      if (can_jump(move.get_end_square(all), turn)){
-         has_takes = true;
-         turn = !turn;
-      }
-   }
-   else if (king_bb){ //since checkers positions can only be repeated if there are kings, if there are no kings,
-      pos_history[hash_bb(red_bb, black_bb, king_bb, !turn)] += 1;//we dont even need to track the position
+   if (move.is_take && can_jump(move.get_end_square(all), turn)){
+      has_takes = true;
+      turn = !turn;
    }
 
    turn = !turn;
    legal_moves = gen_moves();
+   
+   if (king_bb && !has_takes){ //since checkers positions can only be repeated if there are kings, if there are no kings,
+      pos_history[hash_bb(red_bb, black_bb, king_bb, turn)] += 1;//we dont even need to track the position
+   }
+
    game_over = is_game_over();
    move_history.push_back(move);
 }
 
 void Board::undo(){
    movecount--;
-   turn = move_history[move_history.size() - 1].color;
-   move_history.pop_back();
-   const Move move = move_history[move_history.size() - 1];
-   
-   has_takes = false;
-   if (move.is_take){
-      has_takes = true;
-   }
 
-   else if (king_bb){
-      unsigned int hash = hash_bb(red_bb, black_bb, king_bb, !turn);
+   if (king_bb){
+      unsigned int hash = hash_bb(red_bb, black_bb, king_bb, turn);
       if (pos_history[hash] == 1){
          pos_history.erase(hash);
       }
+      else if (pos_history[hash] > 1) {
+         pos_history[hash] -= 1;
+      }
    }
+   
+   int index = move_history.size() - 1;
+   turn = move_history[index].color;
+   has_takes = move_history[index].is_take;
+   move_history.pop_back();
+   const Move move = move_history[index - 1];
 
    red_bb = move.reds;
    black_bb = move.blacks;
