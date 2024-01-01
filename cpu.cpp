@@ -39,17 +39,6 @@ void cpu::set_depth(int new_depth){
 
 //returns the cpu's evaluation of the position
 double cpu::evaluate(Board board){
-    const int result = board.game_over;
-    if (result != 0){
-        if (result == color + 1){
-            return 1000;
-        }
-        if (result == opponent + 1){
-            return -1000;
-        }
-        return 0;
-    }
-
     unsigned long long temp_red = board.red_bb;
     unsigned long long temp_black = board.black_bb;
 
@@ -98,19 +87,19 @@ double cpu::evaluate(Board board){
 
 //performs a recursive minimax search
 double cpu::minimax(Board board, int depth, double alpha, double beta){
-    double score = evaluate(board);
-
-    if (score == 1000){
-        return score - (current_depth - depth);
-    }
-    if (score == -1000){
-        return score + (current_depth - depth);
-    }
     if (board.game_over){
+        
+        if (board.game_over == color + 1){
+            return 1000 - (current_depth - depth);
+        }
+        else if (board.game_over == opponent + 1){
+            return -1000 + (current_depth - depth);
+        }
         return 0;
     }
+
     if (depth == 0 || search_cancelled){
-        return score;
+        return evaluate(board);
     }
 
     if (board.turn == color){
