@@ -5,8 +5,18 @@
 int main(){
     Board board;
     int x;
-    int player_color = 1; //0 == red, 1 == black
-    int cpu_depth = 11;
+    int player_color; //0 == red, 1 == black
+    int cpu_depth;
+    double t;
+
+    std::cout << "type 0 to play as Red, 1 to play as black: ";
+    std::cin >> player_color;
+    std::cout << "\ncpu max depth: ";
+    std::cin >> cpu_depth;
+    std::cout << "\ntime limit for cpu (seconds): ";
+    std::cin >> t;
+    std::cout << "\n";
+
     cpu cpu1(1 - player_color, cpu_depth);
 
     while(!board.game_over){
@@ -28,7 +38,7 @@ int main(){
             }
         }
         else{
-            Move m = cpu1.time_search(board, 1000);
+            Move m = cpu1.time_search(board, t);
             board.push_move(m);
         }
     }
