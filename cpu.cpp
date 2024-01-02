@@ -57,6 +57,7 @@ double cpu::evaluate(Board board){
         red_piece_count++;
         if (ls1b & board.king_bb){
             red_king_count++;
+            red_pos_val += 9;
         }
         else{
             red_pos_val += red_piece_map[ls1b];
@@ -70,6 +71,7 @@ double cpu::evaluate(Board board){
         black_piece_count++;
         if (ls1b & board.king_bb){
             black_king_count++;
+            black_pos_val += 9;
         }
         else{
             black_pos_val += black_piece_map[ls1b];
@@ -80,7 +82,7 @@ double cpu::evaluate(Board board){
     double total_pieces = red_piece_count + black_piece_count;
     double piece_val = ((red_piece_count - black_piece_count)/total_pieces) * 12;
     double king_val = ((red_king_count - black_king_count)/total_pieces) * 6;
-    double pos_val = (((red_pos_val / (red_piece_count - red_king_count + 1)) - (black_pos_val / (black_piece_count - black_king_count + 1)))/7) * 2;
+    double pos_val = (((red_pos_val / red_piece_count) - (black_pos_val / black_piece_count))/7) * 2;
 
     return (piece_val + king_val + pos_val) * eval_multiplier;
 }
