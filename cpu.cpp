@@ -104,9 +104,8 @@ double cpu::minimax(Board board, int depth, double alpha, double beta){
 
     if (board.turn == color){
         double bestVal = -INFINITY;
-        std::vector<Move> legal_moves = board.legal_moves;
-        for (int i = 0; i < legal_moves.size(); i++){
-            board.push_move(legal_moves[i]);
+        for (int i = 0; i < board.legal_moves.size(); i++){
+            board.push_move(board.legal_moves[i]);
 
             bestVal = std::max(bestVal, minimax(board, depth - 1, alpha, beta));
             alpha = std::max(alpha, bestVal);
@@ -120,9 +119,8 @@ double cpu::minimax(Board board, int depth, double alpha, double beta){
     }
     else{
         double bestVal = INFINITY;
-        std::vector<Move> legal_moves = board.legal_moves;
-        for (int i = 0; i < legal_moves.size(); i++){
-            board.push_move(legal_moves[i]);
+        for (int i = 0; i < board.legal_moves.size(); i++){
+            board.push_move(board.legal_moves[i]);
 
             bestVal = std::min(bestVal, minimax(board, depth - 1, alpha, beta));
             beta = std::min(beta, bestVal);
