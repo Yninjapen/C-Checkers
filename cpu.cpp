@@ -18,7 +18,7 @@ void cpu::init_tables(){
         int row = ceil((double)i/4);         //its row, and a bonus of +1 is given for being on the edge
         red_piece_map[bin] = row; 
         black_piece_map[bin] = 9 - row;      //this is reversed for black, so for black row 8 has a value of 1
-        if ((i%4 == 0) || (i%4 == 1)){
+        if ((i%8 == 0) || (i%8 == 1)){
             red_piece_map[bin] += 1;         //I don't actually know if the edge bonus is good, just my opinion
             black_piece_map[bin] += 1;
         }
