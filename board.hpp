@@ -16,13 +16,17 @@ class Move{
         unsigned long long kings;
         int color;
         bool is_take;
+        bool is_promo;
 
-        Move(long long r = 0, long long b = 0, long long k = 0, int c = 0, bool take = false);
+        Move(long long r = 0, long long b = 0, long long k = 0, int c = 0, bool promo = false, bool take = false);
         void get_move_info(const unsigned long long previous_pos);
         long long get_end_square(const unsigned long long previous_pos);
 
         bool operator <(const Move& other) const{
-            return (reds + blacks + kings) < (other.reds + other.blacks + other.kings);
+            return hash_bb(reds, blacks, kings, color) < hash_bb(other.reds, other.blacks, other.kings, other.color);
+        }
+        bool operator ==(const Move& other) const{
+            return (reds == other.reds) && (blacks == other.blacks) && (kings == other.kings);
         }
 };
 
