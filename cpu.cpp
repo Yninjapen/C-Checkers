@@ -47,9 +47,6 @@ double cpu::evaluate(Board board){
     int black_piece_count = 0;
     int black_king_count = 0;
 
-    double red_pos_val = 0;
-    double black_pos_val = 0;
-
     long long ls1b;
     //gets relevent data for red pieces
     while (temp_red){
@@ -57,10 +54,6 @@ double cpu::evaluate(Board board){
         red_piece_count++;
         if (ls1b & board.king_bb){
             red_king_count++;
-            red_pos_val += 9;
-        }
-        else{
-            red_pos_val += red_piece_map[ls1b];
         }
         temp_red &= temp_red-1;
     }
@@ -71,10 +64,6 @@ double cpu::evaluate(Board board){
         black_piece_count++;
         if (ls1b & board.king_bb){
             black_king_count++;
-            black_pos_val += 9;
-        }
-        else{
-            black_pos_val += black_piece_map[ls1b];
         }
         temp_black &= temp_black-1;
     }
@@ -82,15 +71,13 @@ double cpu::evaluate(Board board){
     double total_pieces = red_piece_count + black_piece_count;
     double piece_val = ((red_piece_count - black_piece_count)/total_pieces) * 12;
     double king_val = ((red_king_count - black_king_count)/total_pieces) * 6;
-    double pos_val = (((red_pos_val / red_piece_count) - (black_pos_val / black_piece_count))/7) * 2;
 
-    return (piece_val + king_val + pos_val) * eval_multiplier;
+    return (piece_val + king_val) * eval_multiplier;
 }
 
 //performs a recursive minimax search
 double cpu::minimax(Board board, int depth, double alpha, double beta){
     if (board.game_over){
-        
         if (board.game_over == color + 1){
             return 1000 - (current_depth - depth);
         }
@@ -215,6 +202,7 @@ Move cpu::time_search(Board board, double t_limit, bool feedback){
                 score_map[i] = moveVal;
             }
             else{
+                board.undo();
                 break;
             }
 
