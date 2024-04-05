@@ -23,7 +23,7 @@ class cpu{
         Move max_depth_search(Board board, bool feedback = true);
         Move time_search(Board board, double t_limit, bool feedback = true);
 
-        double minimax(Board board, int depth, double alpha, double beta);
+        double minimax(Board &board, int depth, double alpha, double beta);
         double evaluate(Board board);
 
         void set_color(int new_color);

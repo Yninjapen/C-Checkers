@@ -1,3 +1,9 @@
+/* IMPROVEMENT IDEAS
+https://en.wikipedia.org/wiki/Killer_heuristic
+https://www.chessprogramming.org/Aspiration_Windows
+https://stackoverflow.com/questions/70050677/alpha-beta-pruning-fail-hard-vs-fail-soft
+*/
+
 #include "cpu.hpp"
 
 cpu::cpu(int cpu_color, int cpu_depth){
@@ -76,7 +82,7 @@ double cpu::evaluate(Board board){
 }
 
 //performs a recursive minimax search
-double cpu::minimax(Board board, int depth, double alpha, double beta){
+double cpu::minimax(Board &board, int depth, double alpha, double beta){
     if (board.game_over){
         if (board.game_over == color + 1){
             return 1000 - (current_depth - depth);
@@ -94,11 +100,11 @@ double cpu::minimax(Board board, int depth, double alpha, double beta){
     if (board.turn == color){
         double bestVal = -INFINITY;
         for (int i = 0; i < board.legal_moves.size(); i++){
-            board.push_move(board.legal_moves[i]);
+            Board newBoard(board);
+            newBoard.push_move(board.legal_moves[i]);
 
-            bestVal = std::max(bestVal, minimax(board, depth - 1, alpha, beta));
+            bestVal = std::max(bestVal, minimax(newBoard, depth - 1, alpha, beta));
             alpha = std::max(alpha, bestVal);
-            board.undo();
 
             if (beta <= alpha){
                 break;
@@ -109,11 +115,11 @@ double cpu::minimax(Board board, int depth, double alpha, double beta){
     else{
         double bestVal = INFINITY;
         for (int i = 0; i < board.legal_moves.size(); i++){
-            board.push_move(board.legal_moves[i]);
+            Board newBoard(board);
+            newBoard.push_move(board.legal_moves[i]);
 
-            bestVal = std::min(bestVal, minimax(board, depth - 1, alpha, beta));
+            bestVal = std::min(bestVal, minimax(newBoard, depth - 1, alpha, beta));
             beta = std::min(beta, bestVal);
-            board.undo();
 
             if (beta <= alpha){
                 break;
@@ -141,8 +147,9 @@ Move cpu::max_depth_search(Board board, bool feedback){
     std::vector<Move> legal_moves = board.legal_moves;
 
     for (int i = 0; i < legal_moves.size(); i++){
-        board.push_move(legal_moves[i]);
-        moveVal = minimax(board, max_depth, alpha, beta);
+        Board board2(board);
+        board2.push_move(legal_moves[i]);
+        moveVal = minimax(board2, max_depth, alpha, beta);
 
         if (moveVal > bestVal){
             bestVal = moveVal;
@@ -150,7 +157,6 @@ Move cpu::max_depth_search(Board board, bool feedback){
         }
 
         alpha = std::max(alpha, bestVal);
-        board.undo();
     }
 
     if (feedback){
@@ -195,14 +201,14 @@ Move cpu::time_search(Board board, double t_limit, bool feedback){
         double moveVal;
 
         for (int i = 0; i < legal_moves.size(); i++){
-            board.push_move(legal_moves[i]);
-            moveVal = minimax(board, current_depth, alpha, beta);
+            Board board2(board);
+            board2.push_move(legal_moves[i]);
+            moveVal = minimax(board2, current_depth, alpha, beta);
 
             if (!search_cancelled){
                 score_map[i] = moveVal;
             }
             else{
-                board.undo();
                 break;
             }
 
@@ -211,7 +217,6 @@ Move cpu::time_search(Board board, double t_limit, bool feedback){
             }
 
             alpha = std::max(alpha, bestVal);
-            board.undo();
 
         }
         if (abs(bestVal) > 100){

@@ -5,6 +5,10 @@
 
 int main(){
     Board board;
+    std::vector<Move> move_history;
+    Move initial_pos(4095, 4293918720, 0, 1);
+    move_history.push_back(initial_pos);
+
     int x;
     int player_color; //0 == red, 1 == black
     int cpu_depth = 10;
@@ -37,17 +41,27 @@ int main(){
             // if ((0 <= x) && (x < board.legal_moves.size())){
             //     Move m = board.legal_moves[x];
             //     board.push_move(m);
+            //     move_history.push_back(m);
             // }
-            // else if (board.move_history.size() > 1){
-            //     board.undo();
+            // else{
+            //     if (move_history.size() >= 2){
+            //         board.undo(move_history[move_history.size() - 2], move_history[move_history.size() - 1]);
+            //         move_history.pop_back();
+            //     }
+            //     if (move_history.size() >= 2){
+            //         board.undo(move_history[move_history.size() - 2], move_history[move_history.size() - 1]);
+            //         move_history.pop_back();
+            //     }
             // }
             Move m = cpu2.time_search(board, t);
             board.push_move(m);
+            move_history.push_back(m);
         }
         else{
             //t = (get_time() - thinking_time)/2000;
             Move m = cpu1.time_search(board, t);
             board.push_move(m);
+            move_history.push_back(m);
         }
     }
 
