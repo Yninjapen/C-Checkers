@@ -49,6 +49,7 @@ class Board{
     const uint32_t black_promotion_mask = 0b00000000000000000000000000001111;
     std::unordered_map<unsigned int, int> pos_history;
     const int repetition_limit = 3; //the number of times a position can be repeated before the game is considered a draw
+    const int max_moves_without_take = 50;
 
     public:
         const uint32_t S[34] = {
@@ -68,16 +69,16 @@ class Board{
         uint32_t get_all_pieces();
 
         std::vector<Move> legal_moves;
-        std::vector<Move> move_history;
         Move get_random_move();
         void set_random_pos(int moves_to_play);
         void push_move(Move move);
-        void undo();
+        void undo(Move prev_pos, Move curr_pos);
 
         int is_game_over();
         int game_over;
     
     private:
+        int moves_since_take;
         const uint32_t MASK_L3 = S[ 1] | S[ 2] | S[ 3] | S[ 9] | S[10] | S[11] | S[17] | S[18] | S[19] | S[25] | S[26] | S[27];
         const uint32_t MASK_L5 = S[ 4] | S[ 5] | S[ 6] | S[12] | S[13] | S[14] | S[20] | S[21] | S[22];
         const uint32_t MASK_R3 = S[28] | S[29] | S[30] | S[20] | S[21] | S[22] | S[12] | S[13] | S[14] | S[ 4] | S[ 5] | S[ 6];

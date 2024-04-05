@@ -23,11 +23,9 @@ Board::Board(){
    has_takes = false;
    legal_moves = gen_moves();
 
-   Move initial_pos(4095, 4293918720, 0, 1);
-   move_history.push_back(initial_pos);
-
    movecount = 0;
    game_over = 0;
+   moves_since_take = 0;
 }
 
 uint32_t Board::get_all_pieces(){
@@ -88,7 +86,12 @@ void Board::print_board(){
          std::cout << "Black wins\n";
       }
       else{
-         std::cout << "Its a draw\n";
+         if (moves_since_take >= max_moves_without_take){
+            std::cout << "Draw by 50 move rule\n";
+         }
+         else{
+         std::cout << "Draw by repetition\n";
+         }
       }
    }
 }
@@ -115,11 +118,11 @@ void Board::push_move(Move move){
       pos_history[hash_bb(red_bb, black_bb, king_bb, turn)] += 1;//we dont even need to track the position
    }
 
+   moves_since_take = (moves_since_take + 1) * !move.is_take;
    game_over = is_game_over();
-   move_history.push_back(move);
 }
 
-void Board::undo(){
+void Board::undo(Move prev_pos, Move curr_pos){
    movecount--;
 
    if (king_bb){
@@ -131,16 +134,13 @@ void Board::undo(){
          pos_history[hash] -= 1;
       }
    }
-   
-   int index = move_history.size() - 1;
-   turn = move_history[index].color;
-   has_takes = move_history[index].is_take;
-   move_history.pop_back();
-   const Move move = move_history[index - 1];
 
-   red_bb = move.reds;
-   black_bb = move.blacks;
-   king_bb = move.kings;
+   turn = curr_pos.color;
+   has_takes = curr_pos.is_take;
+
+   red_bb = prev_pos.reds;
+   black_bb = prev_pos.blacks;
+   king_bb = prev_pos.kings;
 
    legal_moves = gen_moves();
 }
@@ -451,7 +451,7 @@ int Board::is_game_over(){
       }
    }
 
-   if (king_bb && (pos_history[hash_bb(red_bb, black_bb, king_bb, turn)] >= repetition_limit)){
+   if ((king_bb && (pos_history[hash_bb(red_bb, black_bb, king_bb, turn)] >= repetition_limit)) || (moves_since_take >= max_moves_without_take)){
       return -1;
    }
 
