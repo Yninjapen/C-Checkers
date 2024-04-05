@@ -2,10 +2,9 @@
 
 //returns the nubmer of 1 bits in a bitboard
 //aka the "Hamming Weight"
-int count_bits(long long bb){
+int count_bits(uint32_t bb){
     int count = 0;
     while(bb){
-        long long ls1b = bb & -bb;
         count++;
         bb&= bb-1;
     }
@@ -13,25 +12,25 @@ int count_bits(long long bb){
 }
 
 //converts a square index (according to the chart above) to its bitboard representation
-long long square_to_binary(const int square){
-   long long n = 0b1;
+uint32_t square_to_binary(const int square){
+   uint32_t n = 0b1;
    n = n << (square - 1);
    return n;
 }
 
 //gets the square index of a binary number
 //NOTE: THERE CAN ONLY BE ONE 1 BIT
-int binary_to_square(const long long binary){
+int binary_to_square(const uint32_t binary){
    return log2(binary) + 1;
 }
 
 //gets the squares of all 1 bits in a bitboard
-std::vector<int> serialize_bb(long long bb){
+std::vector<int> serialize_bb(uint32_t bb){
    std::vector<int> squares;
    if(bb == 0){return squares;}
 
    while (bb){
-      long long ls1b = bb & -bb; // isolate LS1B
+      uint32_t ls1b = bb & -bb; // isolate LS1B
       squares.push_back(binary_to_square(ls1b)); //add squares to vector
       bb &= bb-1; // reset LS1B
    }
@@ -39,12 +38,12 @@ std::vector<int> serialize_bb(long long bb){
 }
 
 //prints a binary representation of a number
-void print_binary(long long num){
+void print_binary(uint32_t num){
    std::cout << std::bitset<32>(num) << "\n";
 }
 
 //hashes the bitboard
-unsigned int hash_bb(unsigned long long reds, unsigned long long blacks, unsigned long long kings, int turn){
+unsigned int hash_bb(uint32_t reds, uint32_t blacks, uint32_t kings, int turn){
    const unsigned int hash = ((reds * 37 + blacks) * 37 + kings) * 37 + turn;
    return hash;
 }

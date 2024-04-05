@@ -34,8 +34,8 @@ class cpu{
         void init_tables();
         double search_start = time(NULL);
         bool search_cancelled = false;
-        std::unordered_map<long long, int> red_piece_map;
-        std::unordered_map<long long, int> black_piece_map;
+        std::unordered_map<uint32_t, int> red_piece_map;
+        std::unordered_map<uint32_t, int> black_piece_map;
 };
 
 class time_manager{

@@ -30,17 +30,17 @@ Board::Board(){
    game_over = 0;
 }
 
-unsigned long long Board::get_all_pieces(){
+uint32_t Board::get_all_pieces(){
    return red_bb | black_bb;
 }
 
 //prints a representation of the board to the console
 void Board::print_board(){
    char arr[32] = {' '};
-   long long red_kings = red_bb & king_bb;
-   long long red_pieces = red_bb & ~king_bb;
-   long long black_kings = black_bb & king_bb;
-   long long black_pieces = black_bb & ~king_bb;
+   uint32_t red_kings = red_bb & king_bb;
+   uint32_t red_pieces = red_bb & ~king_bb;
+   uint32_t black_kings = black_bb & king_bb;
+   uint32_t black_pieces = black_bb & ~king_bb;
    std::vector<int> v;
 
    for (int i = 0; i <=32; i++){arr[i] = '-';}
@@ -95,7 +95,7 @@ void Board::print_board(){
 
 //takes in a Move object, and changes the board state accordingly
 void Board::push_move(Move move){
-   const long long all = get_all_pieces();
+   const uint32_t all = get_all_pieces();
    movecount++;
 
    red_bb = move.reds;
@@ -145,268 +145,273 @@ void Board::undo(){
    legal_moves = gen_moves();
 }
 
+uint32_t Board::get_red_movers(){
+   const uint32_t empty = ~(red_bb | black_bb);
+   uint32_t movers = (empty) >> 4;
+   const uint32_t red_kings = red_bb & king_bb;
+
+   movers |= ((empty & MASK_R3) >> 3);
+   movers |= ((empty & MASK_R5) >> 5);
+   movers &= red_bb;
+   if (red_kings){
+      movers |= (empty << 4) & red_kings;
+      movers |= ((empty & MASK_L3) << 3) & red_kings;
+      movers |= ((empty & MASK_L5) << 5) & red_kings;
+   }
+   return movers;
+}
+
+uint32_t Board::get_black_movers(){
+   const uint32_t empty = ~(red_bb | black_bb);
+   uint32_t movers = (empty) << 4;
+   const uint32_t black_kings = black_bb & king_bb;
+
+   movers |= ((empty & MASK_L3) << 3);
+   movers |= ((empty & MASK_L5) << 5);
+   movers &= black_bb;
+   if (black_kings){
+      movers |= (empty >> 4) & black_kings;
+      movers |= ((empty & MASK_R3) >> 3) & black_kings;
+      movers |= ((empty & MASK_R5) >> 5) & black_kings;
+   }
+   return movers;
+}
+
+uint32_t Board::get_red_jumpers(){
+   const uint32_t empty = ~(red_bb | black_bb);
+   uint32_t jumpers = 0;
+   const uint32_t red_kings = red_bb & king_bb;
+
+   uint32_t temp = (empty >> 4) & black_bb;
+   jumpers |= (((temp & MASK_R3) >> 3) | ((temp & MASK_R5) >> 5));
+   temp = (((empty & MASK_R3) >> 3) | ((empty & MASK_R5) >> 5)) & black_bb;
+   jumpers |= (temp >> 4);
+   jumpers &= red_bb;
+
+   if (red_kings){
+      temp = (empty << 4) & black_bb;
+      jumpers |= (((temp & MASK_L3) << 3) | ((temp & MASK_L5) << 5)) & red_kings;
+      temp = (((empty & MASK_L3) << 3) | ((temp & MASK_L5) << 5)) & black_bb;
+      jumpers |= (temp << 4) & red_kings;
+   }
+   return jumpers;
+}
+
+uint32_t Board::get_black_jumpers(){
+   const uint32_t empty = ~(red_bb | black_bb);
+   uint32_t jumpers = 0;
+   const uint32_t black_kings = black_bb & king_bb;
+
+   uint32_t temp = (empty << 4) & red_bb; //red pieces with an open space behind them
+   jumpers |= (((temp & MASK_L3) << 3) | ((temp & MASK_L5) << 5)); //the squares that these pieces can be jumped from
+   temp = (((empty & MASK_L3) << 3) | ((empty & MASK_L5) << 5)) & red_bb; //squares with an open space behind
+   jumpers |= (temp << 4); //the squares that these pieces can be jumped from
+   jumpers &= black_bb; //Now that we have all the squares that can jump, we and that with the black pieces
+
+   if (black_kings){
+      temp = (empty >> 4) & red_bb;
+      jumpers |= (((temp & MASK_R3) >> 3) | ((temp & MASK_R5) >> 5)) & black_kings;
+      temp = (((empty & MASK_R3) >> 3) | ((empty & MASK_R5) >> 5)) & red_bb;
+      jumpers |= (temp >> 4) & black_kings;
+   }
+   return jumpers;
+}
+
 //generates all legal moves
 std::vector<Move> Board::gen_moves(){
-   const unsigned long long empty = ~(red_bb | black_bb);
+   const uint32_t empty = ~(red_bb | black_bb);
    std::vector<Move> moves;
-   std::vector<Move> takes;
 
    //if turn == 1 (black's turn), generate moves for black
    if (turn){
-      const unsigned long long black_pieces = black_bb & ~king_bb;
-      const unsigned long long black_kings = black_bb & king_bb;
-      const std::vector<int> black_locations = serialize_bb(black_pieces);
-      const std::vector<int> king_locations = serialize_bb(black_kings);
-      unsigned long long bb;
-      long long t;
-      long long o;
-      long long mask;
-      int row;
+      uint32_t jumpers = get_black_jumpers();
 
-      //black piece moves
-      for (int i = 0; i < black_locations.size(); i++){
-
-         //black piece takes
-         t = black_takes[black_locations[i]] & empty;
-         o = black_moves[black_locations[i]] & red_bb;
-         if (t && o){
-            row = ceil((double)black_locations[i]/4);
-            int shift = 4 - (row%2);
-            while(o){
-               long long ls1b = o & -o;
-               mask = ((ls1b | (ls1b >> 1)) >> shift) & t;
-               if (mask){
-                  takes.push_back(Move(red_bb & ~ls1b, (black_bb & ~square_to_binary(black_locations[i])) | (mask & -mask), 
-                                          ((mask & black_promotion_mask) | king_bb) & ~ls1b, 1, (mask & black_promotion_mask), true));
-                  has_takes = true;
+      if (jumpers){
+         while (jumpers){
+            uint32_t piece = jumpers & -jumpers;
+            uint32_t taken = (piece >> 4) & red_bb;
+            uint32_t dest = (((taken & MASK_R3) >> 3) | ((taken & MASK_R5) >> 5)) & empty;
+            if (piece & king_bb){ //King takes
+               if (taken && dest){
+                  moves.push_back(Move(red_bb & ~taken, (black_bb & ~piece) | dest,
+                                          ((king_bb & ~piece) | dest) & ~taken, 1, false, true));
                }
-               o &= o-1;
-            }
-         }
+               taken = (((piece & MASK_R3) >> 3) | ((piece & MASK_R5) >> 5)) & red_bb;
+               dest = (taken >> 4) & empty;
+               if (taken && dest){
+                  moves.push_back(Move(red_bb & ~taken, (black_bb & ~piece) | dest,
+                                             ((king_bb & ~piece) | dest) & ~taken, 1, false, true));
+               }
 
-         //black piece non-takes
-         if (!has_takes){
-            bb = black_moves[black_locations[i]] & empty;
-            while (bb){
-               long long ls1b = bb & -bb;
-               moves.push_back(Move(red_bb, (black_bb & ~square_to_binary(black_locations[i])) | ls1b, (ls1b & black_promotion_mask) | king_bb, 1, (ls1b & black_promotion_mask)));
-               bb &= bb-1;
+               taken = (piece << 4) & red_bb;
+               dest = (((taken & MASK_L3) << 3) | ((taken & MASK_L5) << 5)) & empty;
+               if (taken && dest){
+                  moves.push_back(Move(red_bb & ~taken, (black_bb & ~piece) | dest,
+                                          ((king_bb & ~piece) | dest) & ~taken, 1, false, true));
+               }
+               taken = (((piece & MASK_L3) << 3) | ((piece & MASK_L5) << 5)) & red_bb;
+               dest = (taken << 4) & empty;
+               if (taken && dest){
+                  moves.push_back(Move(red_bb & ~taken, (black_bb & ~piece) | dest,
+                                          ((king_bb & ~piece) | dest) & ~taken, 1, false, true));
+               }
             }
+            else{ //regular takes
+               if (taken && dest){
+                  moves.push_back(Move(red_bb & ~taken, (black_bb & ~piece) | dest,
+                                          ((dest & black_promotion_mask) | king_bb) & ~taken, 1, (dest & black_promotion_mask), true));
+               }
+               taken = (((piece & MASK_R3) >> 3) | ((piece & MASK_R5) >> 5)) & red_bb;
+               dest = (taken >> 4) & empty;
+               if (taken && dest){
+                  moves.push_back(Move(red_bb & ~taken, (black_bb & ~piece) | dest,
+                                             ((dest & black_promotion_mask) | king_bb) & ~taken, 1, (dest & black_promotion_mask), true));
+               }
+            }
+            jumpers &= jumpers-1;
          }
       }
+      else{    //Regular moves
+         uint32_t movers = get_black_movers();
 
-      //black king moves
-      for (int i = 0; i < king_locations.size(); i++){
-         const unsigned long long inverse_location = ~square_to_binary(king_locations[i]);
+         while (movers){
+            uint32_t piece = movers & -movers;
+            uint32_t dest = (piece >> 4) & empty;
 
-         //black king south takes
-         t = black_takes[king_locations[i]] & empty;
-         o = black_moves[king_locations[i]] & red_bb;
-         if (t && o){
-            row = ceil((double)king_locations[i]/4);
-            int shift = 4 - (row%2);
-            while(o){
-               long long ls1b = o & -o;
-               mask = ((ls1b | (ls1b >> 1)) >> shift) & t;
-               if (mask){
-                  takes.push_back(Move(red_bb & ~ls1b, (black_bb & inverse_location) | (mask & -mask), ((king_bb & inverse_location) | (mask & -mask)) & ~ls1b, 1, false, true));
-                  has_takes = true;
+            if (piece & king_bb){ // king moves
+               if (dest){
+                  moves.push_back(Move(red_bb, (black_bb & ~piece) | dest, 
+                                          (king_bb & ~piece) | dest, 1, false));
                }
-               o &= o-1;
-            }
-         }
-
-         //black king north takes
-         t = red_takes[king_locations[i]] & empty;
-         o = red_moves[king_locations[i]] & red_bb;
-         if (t && o){
-            row = ceil((double)king_locations[i]/4);
-            int shift = (row%2) + 3;
-            while(o){
-               long long ls1b = o & -o;
-               mask = ((ls1b | (ls1b << 1)) << shift) & t;
-               if (mask){
-                  takes.push_back(Move(red_bb & ~ls1b, (black_bb & inverse_location) | (mask & -mask), ((king_bb & inverse_location) | (mask & -mask)) & ~ls1b, 1, false, true));
-                  has_takes = true;
+               dest = (((piece & MASK_R3) >> 3) | ((piece & MASK_R5) >> 5)) & empty;
+               if (dest){
+                  moves.push_back(Move(red_bb, (black_bb & ~piece) | dest, 
+                                          (king_bb & ~piece) | dest, 1, false));
                }
-               o &= o-1;
+               dest = (piece << 4) & empty;
+               if (dest){
+                  moves.push_back(Move(red_bb, (black_bb & ~piece) | dest, 
+                                          (king_bb & ~piece) | dest, 1, false));
+               }
+               dest = (((piece & MASK_L3) << 3) | ((piece & MASK_L5) << 5)) & empty;
+               if (dest){
+                  moves.push_back(Move(red_bb, (black_bb & ~piece) | dest, 
+                                          (king_bb & ~piece) | dest, 1, false));
+               }
             }
-         }
-
-         //black king non-takes
-         if (!has_takes){
-            bb = king_moves[king_locations[i]] & empty;
-            while (bb){
-               long long ls1b = bb & -bb;
-               moves.push_back(Move(red_bb, (black_bb & inverse_location) | ls1b, (king_bb & inverse_location) | ls1b, 1));
-               bb &= bb-1;
+            else{// piece moves
+               if (dest){
+               moves.push_back(Move(red_bb, (black_bb & ~piece) | dest, 
+                                             (dest & black_promotion_mask) | king_bb, 1, (dest & black_promotion_mask)));
+               }
+               dest = (((piece & MASK_R3) >> 3) | ((piece & MASK_R5) >> 5)) & empty;
+               if (dest){
+                  moves.push_back(Move(red_bb, (black_bb & ~piece) | dest, 
+                                             (dest & black_promotion_mask) | king_bb, 1, (dest & black_promotion_mask)));
+               }
             }
+            movers &= movers-1;
          }
       }
    }
-
-   //Otherwise, generate moves for red
    else{
-      const unsigned long long red_pieces = red_bb & ~king_bb;
-      const unsigned long long red_kings = red_bb & king_bb;
-      const std::vector<int> red_locations = serialize_bb(red_pieces);
-      const std::vector<int> king_locations = serialize_bb(red_kings);
-      unsigned long long bb;
-      long long t;
-      long long o;
-      long long mask;
-      int row;
+      uint32_t jumpers = get_red_jumpers();
+      if (jumpers){
+         while (jumpers){ // takes
+            uint32_t piece = jumpers & -jumpers;
+            uint32_t taken = (piece << 4) & black_bb;
+            uint32_t dest = (((taken & MASK_L3) << 3) | ((taken & MASK_L5) << 5)) & empty;
 
-      for (int i = 0; i < red_locations.size(); i++){
-
-         //red piece takes
-         t = red_takes[red_locations[i]] & empty;
-         o = red_moves[red_locations[i]] & black_bb;
-         if (t && o){
-            row = ceil((double)red_locations[i]/4);
-            int shift = (row%2) + 3;
-            while(o){
-               long long ls1b = o & -o;
-               mask = ((ls1b | (ls1b << 1)) << shift) & t;
-               if (mask){
-                  takes.push_back(Move((red_bb & ~square_to_binary(red_locations[i])) | (mask & -mask), black_bb & ~ls1b, 
-                                          ((mask & red_promotion_mask) | king_bb) & ~ls1b, 0, (mask & red_promotion_mask), true));
-                  has_takes = true;
+            if (piece & king_bb){ // king takes
+               if (taken && dest){
+               moves.push_back(Move((red_bb & ~piece) | dest, black_bb & ~taken,
+                                          ((king_bb & ~piece) | dest) & ~taken, 0, false, true));
                }
-               o &= o-1;
+               taken = (((piece & MASK_L3) << 3) | ((piece & MASK_L5) << 5)) & black_bb;
+               dest = (taken << 4) & empty;
+               if (taken && dest){
+                  moves.push_back(Move((red_bb & ~piece) | dest, black_bb & ~taken,
+                                             ((king_bb & ~piece) | dest) & ~taken, 0, false, true));
+               }
+               taken = (piece >> 4) & black_bb;
+               dest = (((taken & MASK_R3) >> 3) | ((taken & MASK_R5) >> 5)) & empty;
+               if (taken && dest){
+                  moves.push_back(Move((red_bb & ~piece) | dest, black_bb & ~taken,
+                                          ((king_bb & ~piece) | dest) & ~taken, 0, false, true));
+               }
+               taken = (((piece & MASK_R3) >> 3) | ((piece & MASK_R5) >> 5)) & black_bb;
+               dest = (taken >> 4) & empty;
+               if (taken && dest){
+                  moves.push_back(Move((red_bb & ~piece) | dest, black_bb & ~taken,
+                                          ((king_bb & ~piece) | dest) & ~taken, 0, false, true));
+               }
             }
-         }
-
-         //red piece non-takes
-         if (!has_takes){
-            bb = red_moves[red_locations[i]] & empty;
-            while (bb){
-               long long ls1b = bb & -bb;
-               moves.push_back(Move((red_bb & ~square_to_binary(red_locations[i])) | ls1b, black_bb, (ls1b & red_promotion_mask) | king_bb, 0, (ls1b & red_promotion_mask)));
-               bb &= bb-1;
+            else{// piece takes
+               if (taken && dest){
+               moves.push_back(Move((red_bb & ~piece) | dest, black_bb & ~taken,
+                                          ((dest & red_promotion_mask) | king_bb) & ~taken, 0, (dest & red_promotion_mask), true));
+               }
+               taken = (((piece & MASK_L3) << 3) | ((piece & MASK_L5) << 5)) & black_bb;
+               dest = (taken << 4) & empty;
+               if (taken && dest){
+                  moves.push_back(Move((red_bb & ~piece) | dest, black_bb & ~taken,
+                                          ((dest & red_promotion_mask) | king_bb) & ~taken, 0, (dest & red_promotion_mask), true));
+               }
             }
+            jumpers &= jumpers-1;
          }
       }
+      else{ //    Regular moves
+         uint32_t movers = get_red_movers();
 
-      for (int i = 0; i < king_locations.size(); i++){
-         const unsigned long long inverse_location = ~square_to_binary(king_locations[i]);
-
-         //red king north takes
-         t = red_takes[king_locations[i]] & empty;
-         o = red_moves[king_locations[i]] & black_bb;
-         if (t && o){
-            row = ceil((double)king_locations[i]/4);
-            int shift = (row%2) + 3;
-            while(o){
-               long long ls1b = o & -o;
-               mask = ((ls1b | (ls1b << 1)) << shift) & t;
-               if (mask){
-                  takes.push_back(Move((red_bb & inverse_location) | (mask & -mask), black_bb & ~ls1b, ((king_bb & inverse_location) | (mask & -mask)) & ~ls1b, 0, false, true));
-                  has_takes = true;
+         while(movers){
+            uint32_t piece = movers & -movers;
+            uint32_t dest = (piece << 4) & empty;
+            if (piece & king_bb){ //   king moves
+               if (dest){
+                  moves.push_back(Move((red_bb & ~piece) | dest, black_bb, 
+                                             (king_bb & ~piece) | dest, 0, false));
                }
-               o &= o-1;
-            }
-         }
-
-         //red king south takes
-         t = black_takes[king_locations[i]] & empty;
-         o = black_moves[king_locations[i]] & black_bb;
-         if (t && o){
-            row = ceil((double)king_locations[i]/4);
-            int shift = 4 - (row%2);
-            while(o){
-               long long ls1b = o & -o;
-               mask = ((ls1b | (ls1b >> 1)) >> shift) & t;
-               if (mask){
-                  takes.push_back(Move((red_bb & inverse_location) | (mask & -mask), black_bb & ~ls1b, ((king_bb & inverse_location) | (mask & -mask)) & ~ls1b, 0, false, true));
-                  has_takes = true;
+               dest = (((piece & MASK_L3) << 3) | ((piece & MASK_L5) << 5)) & empty;
+               if (dest){
+                  moves.push_back(Move((red_bb & ~piece) | dest, black_bb, 
+                                             (king_bb & ~piece) | dest, 0, false));
                }
-               o &= o-1;
+               dest = (piece >> 4) & empty;
+               if (dest){
+                  moves.push_back(Move((red_bb & ~piece) | dest, black_bb, 
+                                          (king_bb & ~piece) | dest, 0, false));
+               }
+               dest = (((piece & MASK_R3) >> 3) | ((piece & MASK_R5) >> 5)) & empty;
+               if (dest){
+                  moves.push_back(Move((red_bb & ~piece) | dest, black_bb, 
+                                          (king_bb & ~piece) | dest, 0, false));
+               }
             }
-         }
-
-         //red king non-takes
-         if (!has_takes){
-            bb = king_moves[king_locations[i]] & empty;
-            while (bb){
-               long long ls1b = bb & -bb;
-               moves.push_back(Move((red_bb & inverse_location) | ls1b, black_bb, (king_bb & inverse_location) | ls1b, 0));
-               bb &= bb-1;
+            else{ // regular moves
+               if (dest){
+               moves.push_back(Move((red_bb & ~piece) | dest, black_bb, 
+                                          (dest & red_promotion_mask) | king_bb, 0, (dest & red_promotion_mask)));
+               }
+               dest = (((piece & MASK_L3) << 3) | ((piece & MASK_L5) << 5)) & empty;
+               if (dest){
+                  moves.push_back(Move((red_bb & ~piece) | dest, black_bb, 
+                                             (dest & red_promotion_mask) | king_bb, 0, (dest & red_promotion_mask)));
+               }
             }
+            movers &= movers-1;
          }
       }
    }
 
-   //if there are takes, return them instead of the regular moves
-   if (has_takes){
-      // std::cout << "printing " << takes.size() << " takes:\n";
-      // for (int i = 0; i < takes.size(); i++){takes[i].get_move_info(get_all_pieces());}
-      // std::cout << "done printing takes \n";
-      return takes;
-   }
    return moves;
 }
 
-bool Board::can_jump(long long piece, int color){
-   const long long empty = ~(red_bb | black_bb);
-   const int square = binary_to_square(piece);
-   long long t;
-   long long o;
-   long long mask;
-   
+bool Board::can_jump(uint32_t piece, int color){
    if (color){
-      //black piece takes
-      t = black_takes[square] & empty;
-      o = black_moves[square] & red_bb;
-      if (t && o){
-         int row = ceil((double)square/4);
-         int shift = 4 - (row%2);
-         mask = ((o | (o >> 1)) >> shift) & t;
-         if (mask){
-            return true;
-         }
-      }
-      //black king takes
-      if (piece & king_bb){
-         t = red_takes[square] & empty;
-         o = red_moves[square] & red_bb;
-         if (t && o){
-            int row = ceil((double)square/4);
-            int shift = (row%2) + 3;
-            mask = ((o | (o << 1)) << shift) & t;
-            if (mask){
-               return true;
-            }
-         }
-      }
+      return get_black_jumpers() & piece;
    }
-   else{
-      //red piece takes
-      t = red_takes[square] & empty;
-      o = red_moves[square] & black_bb;
-      if (t && o){
-         int row = ceil((double)square/4);
-         int shift = (row%2) + 3;
-         mask = ((o | (o << 1)) << shift) & t;
-         if (mask){
-            return true;
-         }
-      }
-      //red king takes
-      if (piece & king_bb){
-         t = black_takes[square] & empty;
-         o = black_moves[square] & black_bb;
-         if (t && o){
-            int row = ceil((double)square/4);
-            int shift = 4 - (row%2);
-            mask = ((o | (o >> 1)) >> shift) & t;
-            if (mask){
-               return true;
-            }
-         }
-      }
-   }
-   return false;
+   return get_red_jumpers() & piece;
 }
 
 //returns a random legal move
@@ -454,7 +459,7 @@ int Board::is_game_over(){
 }
 
 //constructor for the move class
-Move::Move(long long r, long long b, long long k, int c, bool promo, bool take){
+Move::Move(uint32_t r, uint32_t b, uint32_t k, int c, bool promo, bool take){
    reds = r;
    blacks = b;
    kings = k;
@@ -463,15 +468,15 @@ Move::Move(long long r, long long b, long long k, int c, bool promo, bool take){
    is_promo = promo;
 }
 
-long long Move::get_end_square(const unsigned long long previous_pos){
+uint32_t Move::get_end_square(const uint32_t previous_pos){
    return (reds | blacks) & ~previous_pos;
 }
 
 //prints the start and end square of the move, as well as the middle (if applicable)
-void Move::get_move_info(unsigned long long previous_pos){
-   long long start = previous_pos & ~(reds | blacks);
-   long long middle = 0;
-   long long end = (reds | blacks) & ~previous_pos;
+void Move::get_move_info(uint32_t previous_pos){
+   uint32_t start = previous_pos & ~(reds | blacks);
+   uint32_t middle = 0;
+   uint32_t end = (reds | blacks) & ~previous_pos;
 
    if ((start & start-1) != 0){
       long long x = start & -start;

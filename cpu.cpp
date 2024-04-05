@@ -14,7 +14,7 @@ cpu::cpu(int cpu_color, int cpu_depth){
 void cpu::init_tables(){
     //initialize piece_map
     for (int i = 1; i <= 32; i++){
-        long long bin = square_to_binary(i); //every square initially gets a value from 1-8 based on
+        uint32_t bin = square_to_binary(i); //every square initially gets a value from 1-8 based on
         int row = ceil((double)i/4);         //its row, and a bonus of +1 is given for being on the edge
         red_piece_map[bin] = row; 
         black_piece_map[bin] = 9 - row;      //this is reversed for black, so for black row 8 has a value of 1
@@ -39,15 +39,15 @@ void cpu::set_depth(int new_depth){
 
 //returns the cpu's evaluation of the position
 double cpu::evaluate(Board board){
-    unsigned long long temp_red = board.red_bb;
-    unsigned long long temp_black = board.black_bb;
+    uint32_t temp_red = board.red_bb;
+    uint32_t temp_black = board.black_bb;
 
     int red_piece_count = 0;
     int red_king_count = 0;
     int black_piece_count = 0;
     int black_king_count = 0;
 
-    long long ls1b;
+    uint32_t ls1b;
     //gets relevent data for red pieces
     while (temp_red){
         ls1b = temp_red & -temp_red;
