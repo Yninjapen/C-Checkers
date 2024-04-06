@@ -115,7 +115,7 @@ void Board::push_move(Move move){
    legal_moves = gen_moves();
    
    if (king_bb && !has_takes){ //since checkers positions can only be repeated if there are kings, if there are no kings,
-      pos_history[hash_bb(red_bb, black_bb, king_bb, turn)] += 1;//we dont even need to track the position
+      pos_history[hash_bb(red_bb, black_bb, king_bb, turn)] += 1;//        we dont even need to track the position
    }
 
    moves_since_take = (moves_since_take + 1) * !move.is_take;
@@ -189,9 +189,9 @@ uint32_t Board::get_red_jumpers(){
    jumpers &= red_bb;
 
    if (red_kings){
-      temp = (empty << 4) & black_bb;
-      jumpers |= (((temp & MASK_L3) << 3) | ((temp & MASK_L5) << 5)) & red_kings;
-      temp = (((empty & MASK_L3) << 3) | ((temp & MASK_L5) << 5)) & black_bb;
+      temp = (empty << 4) & black_bb; // black pieces with empty spaces behind them
+      jumpers |= (((temp & MASK_L3) << 3) | ((temp & MASK_L5) << 5)) & red_kings; // gets the squares these pieces can be jumped from+ands it with red kings
+      temp = (((empty & MASK_L3) << 3) | ((empty & MASK_L5) << 5)) & black_bb; // same process again
       jumpers |= (temp << 4) & red_kings;
    }
    return jumpers;
