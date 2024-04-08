@@ -118,7 +118,7 @@ void Board::push_move(Move move){
       pos_history[hash_bb(red_bb, black_bb, king_bb, turn)] += 1;//        we dont even need to track the position
    }
 
-   moves_since_take = (moves_since_take + 1) * !move.is_take;
+   moves_since_take = (moves_since_take + 1) * !(move.is_take || move.is_promo);
    game_over = is_game_over();
 }
 
