@@ -21,7 +21,7 @@ Board::Board(){
    king_bb = 0b00000000000000000000000000000000;
    turn = 0;
    has_takes = false;
-   legal_moves = gen_moves();
+   gen_moves();
 
    movecount = 0;
    game_over = 0;
@@ -105,14 +105,8 @@ void Board::push_move(Move move){
    black_bb = move.blacks;
    king_bb = move.kings;
 
-   has_takes = false;
-   if (move.is_take && !move.is_promo && can_jump(move.get_end_square(all), turn)){
-      has_takes = true;
-      turn = !turn;
-   }
-
    turn = !turn;
-   legal_moves = gen_moves();
+   gen_moves();
    
    if (king_bb && !has_takes){ //since checkers positions can only be repeated if there are kings, if there are no kings,
       pos_history[hash_bb(red_bb, black_bb, king_bb, turn)] += 1;//        we dont even need to track the position
@@ -142,7 +136,7 @@ void Board::undo(Move prev_pos, Move curr_pos){
    black_bb = prev_pos.blacks;
    king_bb = prev_pos.kings;
 
-   legal_moves = gen_moves();
+   gen_moves();
 }
 
 uint32_t Board::get_red_movers(){
@@ -217,55 +211,288 @@ uint32_t Board::get_black_jumpers(){
    return jumpers;
 }
 
+bool Board::add_red_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings){
+   const uint32_t empty = ~(temp_red | temp_black);
+   const uint32_t adjusted_red = (temp_red & ~jumper);
+   uint32_t taken = (jumper << 4) & temp_black;
+   uint32_t dest = (((taken & MASK_L3) << 3) | ((taken & MASK_L5) << 5)) & empty;
+   uint32_t new_reds;
+   uint32_t new_blacks;
+   uint32_t new_kings;
+   bool result = false;
+
+   // Does a quick check to see whether this piece can even jump
+   uint32_t bb = 0;
+   uint32_t temp = (empty >> 4) & temp_black;
+   bb |= (((temp & MASK_R3) >> 3) | ((temp & MASK_R5) >> 5));
+   temp = (((empty & MASK_R3) >> 3) | ((empty & MASK_R5) >> 5)) & temp_black;
+   bb |= (temp >> 4);
+
+   if (jumper & temp_kings){ // king takes
+      temp = (empty << 4) & temp_black; // black pieces with empty spaces behind them
+      bb |= (((temp & MASK_L3) << 3) | ((temp & MASK_L5) << 5)); // gets the squares these pieces can be jumped from+ands it with red kings
+      temp = (((empty & MASK_L3) << 3) | ((empty & MASK_L5) << 5)) & temp_black; // same process again
+      bb |= (temp << 4);
+
+      if (!(jumper & bb)) return false;
+
+      const uint32_t adjusted_kings = (temp_kings & ~jumper);
+      if (taken && dest){
+         new_reds = adjusted_red | dest;
+         new_blacks = temp_black & ~taken;
+         new_kings = (adjusted_kings | dest) & ~taken;
+         if (!add_red_jump(dest, new_reds, new_blacks, new_kings)){
+            legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 0, false, true));
+         }
+         result = true;
+      }
+      taken = (((jumper & MASK_L3) << 3) | ((jumper & MASK_L5) << 5)) & temp_black;
+      dest = (taken << 4) & empty;
+      if (taken && dest){
+         new_reds = adjusted_red | dest;
+         new_blacks = temp_black & ~taken;
+         new_kings = (adjusted_kings | dest) & ~taken;
+         if (!add_red_jump(dest, new_reds, new_blacks, new_kings)){
+            legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 0, false, true));
+         }
+         result = true;
+      }
+      taken = (jumper >> 4) & temp_black;
+      dest = (((taken & MASK_R3) >> 3) | ((taken & MASK_R5) >> 5)) & empty;
+      if (taken && dest){
+         new_reds = adjusted_red | dest;
+         new_blacks = temp_black & ~taken;
+         new_kings = (adjusted_kings | dest) & ~taken;
+         if (!add_red_jump(dest, new_reds, new_blacks, new_kings)){
+            legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 0, false, true));
+         }
+         result = true;
+      }
+      taken = (((jumper & MASK_R3) >> 3) | ((jumper & MASK_R5) >> 5)) & temp_black;
+      dest = (taken >> 4) & empty;
+      if (taken && dest){
+         new_reds = adjusted_red | dest;
+         new_blacks = temp_black & ~taken;
+         new_kings = (adjusted_kings | dest) & ~taken;
+         if (!add_red_jump(dest, new_reds, new_blacks, new_kings)){
+            legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 0, false, true));
+         }
+         result = true;
+      }
+   }
+   else{
+
+      if (!(jumper & bb)) return false;
+
+      if (taken && dest){
+         new_reds = adjusted_red | dest;
+         new_blacks = temp_black & ~taken;
+         uint32_t is_promo = (dest & red_promotion_mask);
+         new_kings = (is_promo | temp_kings) & ~taken;
+         if (is_promo || !add_red_jump(dest, new_reds, new_blacks, new_kings)){
+            legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 0, is_promo, true));
+         }
+         result = true;
+      }
+      taken = (((jumper & MASK_L3) << 3) | ((jumper & MASK_L5) << 5)) & temp_black;
+      dest = (taken << 4) & empty;
+      if (taken && dest){
+         new_reds = adjusted_red | dest;
+         new_blacks = temp_black & ~taken;
+         uint32_t is_promo = (dest & red_promotion_mask);
+         new_kings = (is_promo | temp_kings) & ~taken;
+         if (is_promo || !add_red_jump(dest, new_reds, new_blacks, new_kings)){
+            legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 0, is_promo, true));
+         }
+         result = true;
+      }
+   }
+   return result;
+}
+
+bool Board::add_black_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings){
+   const uint32_t empty = ~(temp_red | temp_black);
+   const uint32_t adjusted_black = (temp_black & ~jumper);
+   uint32_t taken = (jumper >> 4) & temp_red;
+   uint32_t dest = (((taken & MASK_R3) >> 3) | ((taken & MASK_R5) >> 5)) & empty;
+   uint32_t new_reds;
+   uint32_t new_blacks;
+   uint32_t new_kings;
+   bool result = false;
+
+   uint32_t bb = 0;
+   uint32_t temp = (empty << 4) & temp_red;
+   bb |= (((temp & MASK_L3) << 3) | ((temp & MASK_L5) << 5));
+   temp = (((empty & MASK_L3) << 3) | ((empty & MASK_L5) << 5)) & temp_red;
+   bb |= (temp << 4);
+
+   if (jumper & temp_kings){
+
+      temp = (empty >> 4) & temp_red;
+      bb |= (((temp & MASK_R3) >> 3) | ((temp & MASK_R5) >> 5));
+      temp = (((empty & MASK_R3) >> 3) | ((empty & MASK_R5) >> 5)) & temp_red;
+      bb |= (temp >> 4);
+
+      if (!(jumper & bb)) return false;
+      
+      const uint32_t adjusted_kings = (temp_kings & ~jumper);
+      if (taken && dest){
+         new_reds = temp_red & ~taken;
+         new_blacks = adjusted_black | dest;
+         new_kings = (adjusted_kings | dest) & ~taken;
+         if (!add_black_jump(dest, new_reds, new_blacks, new_kings)){
+            legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 1, false, true));
+         }
+         result = true;
+      }
+      taken = (((jumper & MASK_R3) >> 3) | ((jumper & MASK_R5) >> 5)) & temp_red;
+      dest = (taken >> 4) & empty;
+      if (taken && dest){
+         new_reds = temp_red & ~taken;
+         new_blacks = adjusted_black | dest;
+         new_kings = (adjusted_kings | dest) & ~taken;
+         if (!add_black_jump(dest, new_reds, new_blacks, new_kings)){
+            legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 1, false, true));
+         }
+         result = true;
+      }
+
+      taken = (jumper << 4) & temp_red;
+      dest = (((taken & MASK_L3) << 3) | ((taken & MASK_L5) << 5)) & empty;
+      if (taken && dest){
+         new_reds = temp_red & ~taken;
+         new_blacks = adjusted_black | dest;
+         new_kings = (adjusted_kings | dest) & ~taken;
+         if (!add_black_jump(dest, new_reds, new_blacks, new_kings)){
+            legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 1, false, true));
+         }
+         result = true;
+      }
+      taken = (((jumper & MASK_L3) << 3) | ((jumper & MASK_L5) << 5)) & temp_red;
+      dest = (taken << 4) & empty;
+      if (taken && dest){
+         new_reds = temp_red & ~taken;
+         new_blacks = adjusted_black | dest;
+         new_kings = (adjusted_kings | dest) & ~taken;
+         if (!add_black_jump(dest, new_reds, new_blacks, new_kings)){
+            legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 1, false, true));
+         }
+         result = true;
+      }
+   }
+   else{
+      if (!(jumper & bb)) return false;
+
+      if (taken && dest){
+         new_reds = temp_red & ~taken;
+         new_blacks = adjusted_black | dest;
+         uint32_t is_promo = dest & black_promotion_mask;
+         new_kings = (is_promo | temp_kings) & ~taken;
+         if (is_promo || !add_black_jump(dest, new_reds, new_blacks, new_kings)){
+            legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 1, is_promo, true));
+         }
+         result = true;
+      }
+
+      taken = (((jumper & MASK_R3) >> 3) | ((jumper & MASK_R5) >> 5)) & temp_red;
+      dest = (taken >> 4) & empty;
+      if (taken && dest){
+         new_reds = temp_red & ~taken;
+         new_blacks = adjusted_black | dest;
+         uint32_t is_promo = dest & black_promotion_mask;
+         new_kings = (is_promo | temp_kings) & ~taken;
+         if (is_promo || !add_black_jump(dest, new_reds, new_blacks, new_kings)){
+            legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 1, is_promo, true));
+         }
+         result = true;
+      }
+   }
+   return result;
+}
 //generates all legal moves
-std::vector<Move> Board::gen_moves(){
+void Board::gen_moves(){
+   has_takes = false;
+   legal_moves.clear();
    const uint32_t empty = ~(red_bb | black_bb);
-   std::vector<Move> moves;
 
    //if turn == 1 (black's turn), generate moves for black
    if (turn){
       uint32_t jumpers = get_black_jumpers();
 
       if (jumpers){
+         has_takes = true;
+         uint32_t new_reds;
+         uint32_t new_blacks;
+         uint32_t new_kings;
          while (jumpers){
-            uint32_t piece = jumpers & -jumpers;
+            const uint32_t piece = jumpers & -jumpers;
+            const uint32_t adjusted_black = (black_bb & ~piece);
+
             uint32_t taken = (piece >> 4) & red_bb;
             uint32_t dest = (((taken & MASK_R3) >> 3) | ((taken & MASK_R5) >> 5)) & empty;
             if (piece & king_bb){ //King takes
+               const uint32_t adjusted_kings = (king_bb & ~piece);
                if (taken && dest){
-                  moves.push_back(Move(red_bb & ~taken, (black_bb & ~piece) | dest,
-                                          ((king_bb & ~piece) | dest) & ~taken, 1, false, true));
+                  new_reds = red_bb & ~taken;
+                  new_blacks = adjusted_black | dest;
+                  new_kings = (adjusted_kings | dest) & ~taken;
+                  if (!add_black_jump(dest, new_reds, new_blacks, new_kings)){
+                     legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 1, false, true));
+                  }
                }
                taken = (((piece & MASK_R3) >> 3) | ((piece & MASK_R5) >> 5)) & red_bb;
                dest = (taken >> 4) & empty;
                if (taken && dest){
-                  moves.push_back(Move(red_bb & ~taken, (black_bb & ~piece) | dest,
-                                             ((king_bb & ~piece) | dest) & ~taken, 1, false, true));
+                  new_reds = red_bb & ~taken;
+                  new_blacks = adjusted_black | dest;
+                  new_kings = (adjusted_kings | dest) & ~taken;
+                  if (!add_black_jump(dest, new_reds, new_blacks, new_kings)){
+                     legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 1, false, true));
+                  }
                }
 
                taken = (piece << 4) & red_bb;
                dest = (((taken & MASK_L3) << 3) | ((taken & MASK_L5) << 5)) & empty;
                if (taken && dest){
-                  moves.push_back(Move(red_bb & ~taken, (black_bb & ~piece) | dest,
-                                          ((king_bb & ~piece) | dest) & ~taken, 1, false, true));
+                  new_reds = red_bb & ~taken;
+                  new_blacks = adjusted_black | dest;
+                  new_kings = (adjusted_kings | dest) & ~taken;
+                  if (!add_black_jump(dest, new_reds, new_blacks, new_kings)){
+                     legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 1, false, true));
+                  }
                }
                taken = (((piece & MASK_L3) << 3) | ((piece & MASK_L5) << 5)) & red_bb;
                dest = (taken << 4) & empty;
                if (taken && dest){
-                  moves.push_back(Move(red_bb & ~taken, (black_bb & ~piece) | dest,
-                                          ((king_bb & ~piece) | dest) & ~taken, 1, false, true));
+                  new_reds = red_bb & ~taken;
+                  new_blacks = adjusted_black | dest;
+                  new_kings = (adjusted_kings | dest) & ~taken;
+                  if (!add_black_jump(dest, new_reds, new_blacks, new_kings)){
+                     legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 1, false, true));
+                  }
                }
             }
             else{ //regular takes
                if (taken && dest){
-                  moves.push_back(Move(red_bb & ~taken, (black_bb & ~piece) | dest,
-                                          ((dest & black_promotion_mask) | king_bb) & ~taken, 1, (dest & black_promotion_mask), true));
+                  new_reds = red_bb & ~taken;
+                  new_blacks = adjusted_black | dest;
+                  uint32_t is_promo = dest & black_promotion_mask;
+                  new_kings = (is_promo | king_bb) & ~taken;
+                  if (is_promo || !add_black_jump(dest, new_reds, new_blacks, new_kings)){
+                     legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 1, is_promo, true));
+                  }
                }
+   
                taken = (((piece & MASK_R3) >> 3) | ((piece & MASK_R5) >> 5)) & red_bb;
                dest = (taken >> 4) & empty;
                if (taken && dest){
-                  moves.push_back(Move(red_bb & ~taken, (black_bb & ~piece) | dest,
-                                             ((dest & black_promotion_mask) | king_bb) & ~taken, 1, (dest & black_promotion_mask), true));
+                  new_reds = red_bb & ~taken;
+                  new_blacks = adjusted_black | dest;
+                  uint32_t is_promo = dest & black_promotion_mask;
+                  new_kings = (is_promo | king_bb) & ~taken;
+                  if (is_promo || !add_black_jump(dest, new_reds, new_blacks, new_kings)){
+                     legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 1, is_promo, true));
+                  }
                }
             }
             jumpers &= jumpers-1;
@@ -275,38 +502,38 @@ std::vector<Move> Board::gen_moves(){
          uint32_t movers = get_black_movers();
 
          while (movers){
-            uint32_t piece = movers & -movers;
+            const uint32_t piece = movers & -movers;
             uint32_t dest = (piece >> 4) & empty;
 
             if (piece & king_bb){ // king moves
                if (dest){
-                  moves.push_back(Move(red_bb, (black_bb & ~piece) | dest, 
+                  legal_moves.push_back(Move(red_bb, (black_bb & ~piece) | dest, 
                                           (king_bb & ~piece) | dest, 1, false));
                }
                dest = (((piece & MASK_R3) >> 3) | ((piece & MASK_R5) >> 5)) & empty;
                if (dest){
-                  moves.push_back(Move(red_bb, (black_bb & ~piece) | dest, 
+                  legal_moves.push_back(Move(red_bb, (black_bb & ~piece) | dest, 
                                           (king_bb & ~piece) | dest, 1, false));
                }
                dest = (piece << 4) & empty;
                if (dest){
-                  moves.push_back(Move(red_bb, (black_bb & ~piece) | dest, 
+                  legal_moves.push_back(Move(red_bb, (black_bb & ~piece) | dest, 
                                           (king_bb & ~piece) | dest, 1, false));
                }
                dest = (((piece & MASK_L3) << 3) | ((piece & MASK_L5) << 5)) & empty;
                if (dest){
-                  moves.push_back(Move(red_bb, (black_bb & ~piece) | dest, 
+                  legal_moves.push_back(Move(red_bb, (black_bb & ~piece) | dest, 
                                           (king_bb & ~piece) | dest, 1, false));
                }
             }
             else{// piece moves
                if (dest){
-               moves.push_back(Move(red_bb, (black_bb & ~piece) | dest, 
+                  legal_moves.push_back(Move(red_bb, (black_bb & ~piece) | dest, 
                                              (dest & black_promotion_mask) | king_bb, 1, (dest & black_promotion_mask)));
                }
                dest = (((piece & MASK_R3) >> 3) | ((piece & MASK_R5) >> 5)) & empty;
                if (dest){
-                  moves.push_back(Move(red_bb, (black_bb & ~piece) | dest, 
+                  legal_moves.push_back(Move(red_bb, (black_bb & ~piece) | dest, 
                                              (dest & black_promotion_mask) | king_bb, 1, (dest & black_promotion_mask)));
                }
             }
@@ -317,45 +544,84 @@ std::vector<Move> Board::gen_moves(){
    else{
       uint32_t jumpers = get_red_jumpers();
       if (jumpers){
+         has_takes = true;
+         uint32_t new_reds;
+         uint32_t new_blacks;
+         uint32_t new_kings;
+
          while (jumpers){ // takes
-            uint32_t piece = jumpers & -jumpers;
+            const uint32_t piece = jumpers & -jumpers;
+            const uint32_t adjusted_red = (red_bb & ~piece);
+
             uint32_t taken = (piece << 4) & black_bb;
             uint32_t dest = (((taken & MASK_L3) << 3) | ((taken & MASK_L5) << 5)) & empty;
 
             if (piece & king_bb){ // king takes
+               const uint32_t adjusted_kings = (king_bb & ~piece);
+
                if (taken && dest){
-               moves.push_back(Move((red_bb & ~piece) | dest, black_bb & ~taken,
-                                          ((king_bb & ~piece) | dest) & ~taken, 0, false, true));
+                  new_reds = adjusted_red | dest;
+                  new_blacks = black_bb & ~taken;
+                  new_kings = (adjusted_kings | dest) & ~taken;
+                  if (!add_red_jump(dest, new_reds, new_blacks, new_kings)){
+                     legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 0, false, true));
+                  }
                }
+
                taken = (((piece & MASK_L3) << 3) | ((piece & MASK_L5) << 5)) & black_bb;
                dest = (taken << 4) & empty;
                if (taken && dest){
-                  moves.push_back(Move((red_bb & ~piece) | dest, black_bb & ~taken,
-                                             ((king_bb & ~piece) | dest) & ~taken, 0, false, true));
+                  new_reds = adjusted_red | dest;
+                  new_blacks = black_bb & ~taken;
+                  new_kings = (adjusted_kings | dest) & ~taken;
+                  if (!add_red_jump(dest, new_reds, new_blacks, new_kings)){
+                     legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 0, false, true));
+                  }
                }
+
                taken = (piece >> 4) & black_bb;
                dest = (((taken & MASK_R3) >> 3) | ((taken & MASK_R5) >> 5)) & empty;
                if (taken && dest){
-                  moves.push_back(Move((red_bb & ~piece) | dest, black_bb & ~taken,
-                                          ((king_bb & ~piece) | dest) & ~taken, 0, false, true));
+                  new_reds = adjusted_red | dest;
+                  new_blacks = black_bb & ~taken;
+                  new_kings = (adjusted_kings | dest) & ~taken;
+                  if (!add_red_jump(dest, new_reds, new_blacks, new_kings)){
+                     legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 0, false, true));
+                  }
                }
+
                taken = (((piece & MASK_R3) >> 3) | ((piece & MASK_R5) >> 5)) & black_bb;
                dest = (taken >> 4) & empty;
                if (taken && dest){
-                  moves.push_back(Move((red_bb & ~piece) | dest, black_bb & ~taken,
-                                          ((king_bb & ~piece) | dest) & ~taken, 0, false, true));
+                  new_reds = adjusted_red | dest;
+                  new_blacks = black_bb & ~taken;
+                  new_kings = (adjusted_kings | dest) & ~taken;
+                  if (!add_red_jump(dest, new_reds, new_blacks, new_kings)){
+                     legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 0, false, true));
+                  }
                }
             }
             else{// piece takes
                if (taken && dest){
-               moves.push_back(Move((red_bb & ~piece) | dest, black_bb & ~taken,
-                                          ((dest & red_promotion_mask) | king_bb) & ~taken, 0, (dest & red_promotion_mask), true));
+                  new_reds = adjusted_red | dest;
+                  new_blacks = black_bb & ~taken;
+                  uint32_t is_promo = (dest & red_promotion_mask);
+                  new_kings = (is_promo | king_bb) & ~taken;
+                  if (is_promo || !add_red_jump(dest, new_reds, new_blacks, new_kings)){
+                     legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 0, is_promo, true));
+                  }
                }
+
                taken = (((piece & MASK_L3) << 3) | ((piece & MASK_L5) << 5)) & black_bb;
                dest = (taken << 4) & empty;
                if (taken && dest){
-                  moves.push_back(Move((red_bb & ~piece) | dest, black_bb & ~taken,
-                                          ((dest & red_promotion_mask) | king_bb) & ~taken, 0, (dest & red_promotion_mask), true));
+                  new_reds = adjusted_red | dest;
+                  new_blacks = black_bb & ~taken;
+                  uint32_t is_promo = (dest & red_promotion_mask);
+                  new_kings = (is_promo | king_bb) & ~taken;
+                  if (is_promo || !add_red_jump(dest, new_reds, new_blacks, new_kings)){
+                     legal_moves.push_back(Move(new_reds, new_blacks, new_kings, 0, is_promo, true));
+                  }
                }
             }
             jumpers &= jumpers-1;
@@ -365,37 +631,37 @@ std::vector<Move> Board::gen_moves(){
          uint32_t movers = get_red_movers();
 
          while(movers){
-            uint32_t piece = movers & -movers;
+            const uint32_t piece = movers & -movers;
             uint32_t dest = (piece << 4) & empty;
             if (piece & king_bb){ //   king moves
                if (dest){
-                  moves.push_back(Move((red_bb & ~piece) | dest, black_bb, 
+                  legal_moves.push_back(Move((red_bb & ~piece) | dest, black_bb, 
                                              (king_bb & ~piece) | dest, 0, false));
                }
                dest = (((piece & MASK_L3) << 3) | ((piece & MASK_L5) << 5)) & empty;
                if (dest){
-                  moves.push_back(Move((red_bb & ~piece) | dest, black_bb, 
+                  legal_moves.push_back(Move((red_bb & ~piece) | dest, black_bb, 
                                              (king_bb & ~piece) | dest, 0, false));
                }
                dest = (piece >> 4) & empty;
                if (dest){
-                  moves.push_back(Move((red_bb & ~piece) | dest, black_bb, 
+                  legal_moves.push_back(Move((red_bb & ~piece) | dest, black_bb, 
                                           (king_bb & ~piece) | dest, 0, false));
                }
                dest = (((piece & MASK_R3) >> 3) | ((piece & MASK_R5) >> 5)) & empty;
                if (dest){
-                  moves.push_back(Move((red_bb & ~piece) | dest, black_bb, 
+                  legal_moves.push_back(Move((red_bb & ~piece) | dest, black_bb, 
                                           (king_bb & ~piece) | dest, 0, false));
                }
             }
             else{ // regular moves
                if (dest){
-               moves.push_back(Move((red_bb & ~piece) | dest, black_bb, 
+               legal_moves.push_back(Move((red_bb & ~piece) | dest, black_bb, 
                                           (dest & red_promotion_mask) | king_bb, 0, (dest & red_promotion_mask)));
                }
                dest = (((piece & MASK_L3) << 3) | ((piece & MASK_L5) << 5)) & empty;
                if (dest){
-                  moves.push_back(Move((red_bb & ~piece) | dest, black_bb, 
+                  legal_moves.push_back(Move((red_bb & ~piece) | dest, black_bb, 
                                              (dest & red_promotion_mask) | king_bb, 0, (dest & red_promotion_mask)));
                }
             }
@@ -403,8 +669,6 @@ std::vector<Move> Board::gen_moves(){
          }
       }
    }
-
-   return moves;
 }
 
 bool Board::can_jump(uint32_t piece, int color){
