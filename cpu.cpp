@@ -3,10 +3,11 @@ https://en.wikipedia.org/wiki/Killer_heuristic
 https://www.chessprogramming.org/Aspiration_Windows
 https://stackoverflow.com/questions/70050677/alpha-beta-pruning-fail-hard-vs-fail-soft
 https://www.chessprogramming.org/Window
-https://github.com/maksimKorzh/chess_programming/blob/master/didactic_engines/cpw-engine/search.cpp#L103
-
+https://github.com/maksimKorzh/chess_programming/blob/master/didactic_engines/cpw-engine/search.cpp
+https://mediocrechess.blogspot.com/2007/01/guide-aspiration-windows-killer-moves.html
 */
 
+//VERSION 1.0
 #include "cpu.hpp"
 
 cpu::cpu(int cpu_color, int cpu_depth){

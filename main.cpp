@@ -1,6 +1,6 @@
 #include <iostream>
 #include "cpu.hpp"
-#include "new_cpu.hpp"
+//#include "new_cpu.hpp"
 #include "board.hpp"
 
 int main(){
@@ -30,32 +30,32 @@ int main(){
     while(!board.game_over){
         board.print_board();
         if (board.turn == player_color){
-            // thinking_time = get_time();
-            // for (int i = 0; i < board.legal_moves.size(); i++){
-            //     std::cout << i << ": ";
-            //     board.legal_moves[i].get_move_info(board.get_all_pieces());
-            //     std::cout << ", ";
-            // }
-            // std::cout << "\n";
-            // std::cin >> x;
-            // if ((0 <= x) && (x < board.legal_moves.size())){
-            //     Move m = board.legal_moves[x];
-            //     board.push_move(m);
-            //     move_history.push_back(m);
-            // }
-            // else{
-            //     if (move_history.size() >= 2){
-            //         board.undo(move_history[move_history.size() - 2], move_history[move_history.size() - 1]);
-            //         move_history.pop_back();
-            //     }
-            //     if (move_history.size() >= 2){
-            //         board.undo(move_history[move_history.size() - 2], move_history[move_history.size() - 1]);
-            //         move_history.pop_back();
-            //     }
-            // }
-            Move m = cpu2.time_search(board, t);
-            board.push_move(m);
-            move_history.push_back(m);
+            thinking_time = get_time();
+            for (int i = 0; i < board.legal_moves.size(); i++){
+                std::cout << i << ": ";
+                board.legal_moves[i].get_move_info(board.get_all_pieces());
+                std::cout << ", ";
+            }
+            std::cout << "\n";
+            std::cin >> x;
+            if ((0 <= x) && (x < board.legal_moves.size())){
+                Move m = board.legal_moves[x];
+                board.push_move(m);
+                move_history.push_back(m);
+            }
+            else{
+                if (move_history.size() >= 2){
+                    board.undo(move_history[move_history.size() - 2], move_history[move_history.size() - 1]);
+                    move_history.pop_back();
+                }
+                if (move_history.size() >= 2){
+                    board.undo(move_history[move_history.size() - 2], move_history[move_history.size() - 1]);
+                    move_history.pop_back();
+                }
+            }
+            // Move m = cpu2.time_search(board, t);
+            // board.push_move(m);
+            // move_history.push_back(m);
         }
         else{
             //t = (get_time() - thinking_time)/2000;

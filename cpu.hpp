@@ -9,7 +9,7 @@
 #include <time.h>
 #include "misc.hpp"
 #include "board.hpp"
-
+//VERSION 1.0
 class cpu{
     int max_depth;
     int current_depth;
