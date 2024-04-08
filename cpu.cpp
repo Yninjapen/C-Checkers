@@ -2,6 +2,9 @@
 https://en.wikipedia.org/wiki/Killer_heuristic
 https://www.chessprogramming.org/Aspiration_Windows
 https://stackoverflow.com/questions/70050677/alpha-beta-pruning-fail-hard-vs-fail-soft
+https://www.chessprogramming.org/Window
+https://github.com/maksimKorzh/chess_programming/blob/master/didactic_engines/cpw-engine/search.cpp#L103
+
 */
 
 #include "cpu.hpp"
@@ -18,17 +21,6 @@ cpu::cpu(int cpu_color, int cpu_depth){
 //Initializes all the tables necessary for evaluation.
 //Called only once, when the cpu is initialized.
 void cpu::init_tables(){
-    //initialize piece_map
-    for (int i = 1; i <= 32; i++){
-        uint32_t bin = square_to_binary(i); //every square initially gets a value from 1-8 based on
-        int row = ceil((double)i/4);         //its row, and a bonus of +1 is given for being on the edge
-        red_piece_map[bin] = row; 
-        black_piece_map[bin] = 9 - row;      //this is reversed for black, so for black row 8 has a value of 1
-        if ((i%8 == 0) || (i%8 == 1)){
-            red_piece_map[bin] += 1;         //I don't actually know if the edge bonus is good, just my opinion
-            black_piece_map[bin] += 1;
-        }
-    }
 }
 
 //changes the color that the cpu plays for
@@ -48,47 +40,84 @@ double cpu::evaluate(Board board){
     uint32_t temp_red = board.red_bb;
     uint32_t temp_black = board.black_bb;
 
-    int red_piece_count = 0;
-    int red_king_count = 0;
-    int black_piece_count = 0;
-    int black_king_count = 0;
+    uint32_t red_moves = board.get_red_movers();
+    uint32_t black_moves = board.get_black_movers();
 
-    uint32_t ls1b;
+    double red_score = 0;
+    double black_score = 0;
+    int red_piece_count = 0;
+    int black_piece_count = 0;
+    int red_king_count = 0;
+    int black_king_count = 0;
+    uint32_t piece;
     //gets relevent data for red pieces
     while (temp_red){
-        ls1b = temp_red & -temp_red;
+        piece = temp_red & -temp_red;
+        red_score += 75;
         red_piece_count++;
-        if (ls1b & board.king_bb){
-            red_king_count++;
+        if (piece & board.king_bb){
+            red_score += 25;
+            if (piece & SINGLE_EDGE)
+                red_score -= 10;
+            else if (piece & CENTER_8){
+                red_score += 10;
+            }
+        }
+        if (piece & red_moves){
+            red_score += 10;
         }
         temp_red &= temp_red-1;
     }
 
     //gets relevent data for black pieces
     while (temp_black){
-        ls1b = temp_black & -temp_black;
+        piece = temp_black & -temp_black;
+        black_score += 75;
         black_piece_count++;
-        if (ls1b & board.king_bb){
-            black_king_count++;
+        if (piece & board.king_bb){
+            black_score += 25;
+            if (piece & SINGLE_EDGE){
+                black_score -= 10;
+            }
+            else if (piece & CENTER_8){
+                black_score += 10;
+            }
+        }
+        if (piece & black_moves){
+            black_score += 10;
         }
         temp_black &= temp_black-1;
     }
 
-    double total_pieces = red_piece_count + black_piece_count;
-    double piece_val = ((red_piece_count - black_piece_count)/total_pieces) * 12;
-    double king_val = ((red_king_count - black_king_count)/total_pieces) * 6;
+    if (red_king_count + black_king_count > (red_piece_count + black_piece_count)*.75)// loosely checks if it is the endgame
+    {
+        if ((red_piece_count > black_piece_count))
+        {
+            // In losing endgame situations, encourages king moves towards the double corners
+            if (board.black_bb & DOUBLE_CORNER & board.king_bb) black_score += 10;
+            if (red_king_count == red_piece_count) red_score += 75;
+            if (red_piece_count >= black_piece_count + 2) red_score += (black_piece_count == 1) ? 150 : 75;
+        }
+        else if ((black_piece_count > red_piece_count) && (board.red_bb & DOUBLE_CORNER & board.king_bb))
+        {
+            if (board.red_bb & DOUBLE_CORNER & board.king_bb) red_score += 10;
+            if (black_king_count == red_piece_count) black_score += 75;
+            if (black_piece_count >= red_piece_count + 2) black_score += (red_piece_count == 1) ? 150 : 75;
+        }
+    }
 
-    return (piece_val + king_val) * eval_multiplier;
+    return ((red_score - black_score) * eval_multiplier);
 }
 
 //performs a recursive minimax search
 double cpu::minimax(Board &board, int depth, double alpha, double beta){
+    nodes_traversed++;
     if (board.game_over){
         if (board.game_over == color + 1){
-            return 1000 - (current_depth - depth);
+            return 10000 - (current_depth - depth);
         }
         else if (board.game_over == opponent + 1){
-            return -1000 + (current_depth - depth);
+            return -10000 + (current_depth - depth);
         }
         return 0;
     }
@@ -133,7 +162,7 @@ double cpu::minimax(Board &board, int depth, double alpha, double beta){
 Perfoms a minimax search up to the max_depth of the cpu
 and returns the best move.
 */
-Move cpu::max_depth_search(Board board, bool feedback){
+Move cpu::max_depth_search(Board &board, bool feedback){
     if (feedback){
         std::cout << "calculating... \n";
     }
@@ -177,7 +206,8 @@ void cpu::manage_time(){
 /*
 Finds the best move, but is limited by a time limit t(seconds)
 */
-Move cpu::time_search(Board board, double t_limit, bool feedback){
+Move cpu::time_search(Board &board, double t_limit, bool feedback){
+    nodes_traversed = 0;
     if (feedback){
         std::cout << "calculating... \n";
     }
@@ -219,7 +249,7 @@ Move cpu::time_search(Board board, double t_limit, bool feedback){
             alpha = std::max(alpha, bestVal);
 
         }
-        if (abs(bestVal) > 100){
+        if (abs(bestVal) > 5000){
             search_cancelled = true;
             break;
         }
@@ -235,6 +265,7 @@ Move cpu::time_search(Board board, double t_limit, bool feedback){
     if (feedback){
         std::cout << "The best move has a value of " << bestVal << ", max depth reached was " << current_depth;
         std::cout << ", time elapsed: " << get_time() - search_start << " milliseconds\n";
+        std::cout << "Nodes Traversed: " << nodes_traversed << "\n";
     }
 
     t1.join();
