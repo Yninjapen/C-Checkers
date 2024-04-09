@@ -22,10 +22,8 @@ class cpu{
         cpu(int cpu_color = 0, int cpu_depth = 10);
         Move max_depth_search(Board &board, bool feedback = true);
         Move time_search(Board &board, double t_limit, bool feedback = true);
-
-        double minimax(Board &board, int depth, double alpha, double beta);
-        double evaluate(Board board);
-
+        int search_root(Board &board, int depth, int alpha, int beta);
+        
         void set_color(int new_color);
         void set_depth(int new_depth);
         void manage_time();
@@ -41,12 +39,17 @@ class cpu{
                                         square_map[29] | square_map[30] | square_map[31];
         const uint32_t CENTER_8 = square_map[9] | square_map[10] | square_map[13] | square_map[14] | square_map[17] | square_map[18] | 
                                         square_map[21] | square_map[22];
-        void init_tables();
         double search_start = time(NULL);
         bool search_cancelled = false;
         int nodes_traversed;
-        std::unordered_map<uint32_t, int> red_piece_map;
-        std::unordered_map<uint32_t, int> black_piece_map;
+        Move move_to_make;
+
+        int search_iterate(Board &board);
+        int search_widen(Board &board, int depth, int val);
+        int search(Board &board, int depth, int ply, int alpha, int beta);
+        int quiesce(Board &board, int alpha, int beta);
+        int eval(Board board);
+        std::vector<Move> order_moves(std::map<Move, int> score_map);
 };
 
 class time_manager{
