@@ -18,11 +18,15 @@ class Move{
         uint32_t reds;
         uint32_t blacks;
         uint32_t kings;
+        uint32_t to;
+        uint32_t from;
+    
         int color;
         bool is_take;
         bool is_promo;
+        int score = 0;
 
-        Move(uint32_t r = 0, uint32_t b = 0, uint32_t k = 0, int c = 0, bool promo = false, bool take = false);
+        Move(uint32_t r = 0, uint32_t b = 0, uint32_t k = 0, uint32_t to = 0, uint32_t from = 0, int c = 0, bool promo = false, bool take = false);
         void get_move_info(const uint32_t previous_pos);
         uint32_t get_end_square(const uint32_t previous_pos);
 
@@ -93,5 +97,6 @@ class Board{
         bool add_red_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings);
         bool add_black_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings);
         bool can_jump(uint32_t piece, int color);
+        // movegen_push();
 };
 #endif
