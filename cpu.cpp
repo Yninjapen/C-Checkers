@@ -53,6 +53,7 @@ int cpu::eval(Board board){
         red_score += 75;
         red_piece_count++;
         if (piece & board.king_bb){
+            red_king_count++;
             red_score += 25;
             if (piece & SINGLE_EDGE)
                 red_score -= 10;
@@ -72,6 +73,7 @@ int cpu::eval(Board board){
         black_score += 75;
         black_piece_count++;
         if (piece & board.king_bb){
+            black_king_count++;
             black_score += 25;
             if (piece & SINGLE_EDGE){
                 black_score -= 10;
@@ -84,23 +86,6 @@ int cpu::eval(Board board){
             black_score += 10;
         }
         temp_black &= temp_black-1;
-    }
-
-    if (red_king_count + black_king_count > (red_piece_count + black_piece_count)*.75)// loosely checks if it is the endgame
-    {
-        if ((red_piece_count > black_piece_count))
-        {
-            // In losing endgame situations, encourages king moves towards the double corners
-            if (board.black_bb & DOUBLE_CORNER & board.king_bb) black_score += 10;
-            if (red_king_count == red_piece_count) red_score += 75;
-            if (red_piece_count >= black_piece_count + 2) red_score += (black_piece_count == 1) ? 150 : 75;
-        }
-        else if ((black_piece_count > red_piece_count) && (board.red_bb & DOUBLE_CORNER & board.king_bb))
-        {
-            if (board.red_bb & DOUBLE_CORNER & board.king_bb) red_score += 10;
-            if (black_king_count == red_piece_count) black_score += 75;
-            if (black_piece_count >= red_piece_count + 2) black_score += (red_piece_count == 1) ? 150 : 75;
-        }
     }
 
     int result = red_score - black_score;
