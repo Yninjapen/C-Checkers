@@ -93,34 +93,70 @@ int cpu::eval(Board board){
     return result;
 }
 
+int cpu::draw_eval(Board &board){
+    int red_count = count_bits(board.red_bb);
+    int black_count = count_bits(board.black_bb);
+    int result = 0;
+    if (red_count > black_count){
+        result -= (black_count == 1 || red_count >= black_count + 2) ?  10 : 5; //penalty for drawing when up a piece
+    }
+    else if (black_count > red_count){
+        result += (red_count == 1 || black_count >= red_count + 2) ? 10 : 5;
+    }
+    if (board.turn) result = -result;
+    return result;
+}
+
+void cpu::set_move_scores(Move * m, int movecount, int ply){
+    for (int i = 0; i < movecount; i++){
+        if ((m[i].from == killers[ply][1].from)
+        &&  (m[i].to == killers[ply][1].to)
+        &&  (m[i].score < KILLER_SORT - 1)){
+            m[i].score = KILLER_SORT - 1;
+        }
+
+        if ((m[i].from == killers[ply][0].from)
+        &&  (m[i].to == killers[ply][0].to)
+        &&  (m[i].score < KILLER_SORT)){
+            m[i].score = KILLER_SORT;
+        }
+    }
+}
+
 int cpu::search(Board &board, int depth, int ply, int alpha, int beta){
     nodes_traversed++;
-    if (board.game_over){
-        if (board.game_over > 0){
-            return -MAX_VAL + ply;
-        }
-        return 0;
-    }
-
     if (search_cancelled){
         return 0;
     }
     int val = -MAX_VAL;
     int mate_value = MAX_VAL - ply;
+    int raised_alpha = 0;
+    Move movelist[64];
+    Move current_move;
 
     // If depth == 0, do a quiescence search
-    if (depth < 1) return quiesce(board, alpha, beta);
+    if (depth < 1) return quiesce(board, ply + 1, alpha, beta);
 
+    if (board.check_repetition()) return draw_eval(board);
+
+    int movecount = board.gen_moves(movelist);
+    set_move_scores(movelist, movecount, ply);
     int new_depth = depth - 1;
-    for (int i = 0; i < board.legal_moves.size(); i++){
+
+    for (int i = 0; i < movecount; i++){
         Board board2(board);
-        board2.push_move(board.legal_moves[i]);
+        order_moves(movecount, movelist, i);
+        current_move = movelist[i];
+        board2.push_move(current_move);
 
         val = -search(board2, new_depth, ply + 1, -beta, -alpha);
 
         if (search_cancelled) return 0;
         if (val > alpha){
             if (val >= beta){
+                if (!current_move.is_take && !current_move.is_promo){
+                    set_killers(current_move, ply);
+                }   
                 alpha = beta;
                 break;
             }
@@ -129,19 +165,20 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta){
         }
     }
 
+    if (!movecount){// If there are no moves, the side to play loses
+        alpha = -MAX_VAL + ply;
+    }   
     return alpha;
 }
 
-int cpu::quiesce(Board &board, int alpha, int beta){
+int cpu::quiesce(Board &board, int ply, int alpha, int beta){
     nodes_traversed++;
-    if (board.game_over){
-        if (board.game_over > 0){
-            return -MAX_VAL;
-        }
-        return 0;
-    }
     if (search_cancelled){
         return 0;
+    }
+
+    if (board.check_repetition()){
+        return draw_eval(board);
     }
 
     int val = eval(board);
@@ -150,12 +187,19 @@ int cpu::quiesce(Board &board, int alpha, int beta){
     if (val >= beta) return beta;
     if (alpha < val) alpha = val;
 
-    for (int i = 0; i < board.legal_moves.size(); i++){
-        if (!(board.legal_moves[i].is_take || board.legal_moves[i].is_promo)) continue;
+    Move movelist[64];
+    int movecount = board.gen_moves(movelist);
+
+    if (!movecount){
+        return -MAX_VAL + ply;
+    }
+    for (int i = 0; i < movecount; i++){
+        order_moves(movecount, movelist, i);
+        if (!(movelist[i].is_take || movelist[i].is_promo)) continue;
 
         Board board2(board);
-        board2.push_move(board.legal_moves[i]);
-        val = -quiesce(board2, -beta, -alpha);
+        board2.push_move(movelist[i]);
+        val = -quiesce(board2, ply + 1, -beta, -alpha);
 
         if (search_cancelled) return 0;
 
@@ -168,19 +212,21 @@ int cpu::quiesce(Board &board, int alpha, int beta){
 }
 
 int cpu::search_root(Board &board, int depth, int alpha, int beta){
+    Move movelist[64];
+    int movecount = board.gen_moves(movelist);
     int val = 0;
-    int best = -MAX_VAL;
 
-    for (int i = 0; i < board.legal_moves.size(); i++){
+    for (int i = 0; i < movecount; i++){
         Board board2(board);
-        board2.push_move(board.legal_moves[i]);
+        order_moves(movecount, movelist, i);
+        board2.push_move(movelist[i]);
 
         val = -search(board2, depth - 1, 0, -beta, -alpha);
 
         if (search_cancelled) break;
 
         if (val > alpha){
-            move_to_make = board.legal_moves[i];
+            move_to_make = movelist[i];
             if (val > beta) return beta;
 
             alpha = val;
@@ -200,9 +246,11 @@ int cpu::search_widen(Board &board, int depth, int val){
     }
     return temp;
 }
+
 int cpu::search_iterate(Board &board){
     int val;
-    int move_count = board.legal_moves.size();
+    Move movelist[64];
+    int move_count = board.gen_moves(movelist);
     
     val = search_root(board, 1, -MAX_VAL, MAX_VAL);
     current_depth = 2;
@@ -217,6 +265,15 @@ int cpu::search_iterate(Board &board){
 
     return val;
 }
+
+void cpu::set_killers(Move m, int ply){
+    if (!m.is_take){
+        if (m.from != killers[ply][0].from || m.to != killers[ply][0].to){
+            killers[ply][1] = killers[ply][0];
+        }
+        killers[ply][0] = m;
+    }
+}
 /*
 Perfoms a minimax search up to the max_depth of the cpu
 and returns the best move.
@@ -226,7 +283,9 @@ Move cpu::max_depth_search(Board &board, bool feedback){
         std::cout << "calculating... \n";
     }
 
-    move_to_make = board.legal_moves[0];
+    Move movelist[64];
+    board.gen_moves(movelist);
+    move_to_make = movelist[0];
 
     int val = search_root(board, max_depth, -MAX_VAL, MAX_VAL);
 
@@ -247,30 +306,28 @@ void cpu::manage_time(){
 
 //orders the moves based on the previous searches
 //meant to be used only with time_search
-std::vector<Move> cpu::order_moves(std::map<Move, int> score_map){
-    std::vector<Move> result;
-    for (auto const& [key, val] : score_map){
-        bool inserted = false;
-        for (int i = 0; i < result.size(); i++){
-            if (val > score_map[result[i]]){
-                result.insert(result.begin() + i, key);
-                inserted = true;
-                break;
-            }
-        }
-        if (!inserted){
-            result.push_back(key);
+void cpu::order_moves(int movecount, Move * m, int current){
+    
+    int high = current;
+
+    for(int i=current+1; i < movecount; i++){
+        if (m[i].score > m[high].score){
+            high = i;
         }
     }
 
-    return result;
+    Move temp = m[high];
+    m[high] = m[current];
+    m[current] = temp;
 }
 
 /*
 Finds the best move, but is limited by a time limit t(seconds)
 */
 Move cpu::time_search(Board &board, double t_limit, bool feedback){
-    move_to_make = board.legal_moves[0];
+    Move movelist[64];
+    board.gen_moves(movelist);
+    move_to_make = movelist[0];
     nodes_traversed = 0;
     if (feedback){
         std::cout << "calculating... \n";

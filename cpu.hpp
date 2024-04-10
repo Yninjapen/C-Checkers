@@ -22,13 +22,13 @@ class cpu{
         cpu(int cpu_color = 0, int cpu_depth = 10);
         Move max_depth_search(Board &board, bool feedback = true);
         Move time_search(Board &board, double t_limit, bool feedback = true);
-        int search_root(Board &board, int depth, int alpha, int beta);
         
         void set_color(int new_color);
         void set_depth(int new_depth);
         void manage_time();
 
     private:
+        Move killers[1024][2];
         const uint32_t square_map[34] = {
             (1 << 0), (1 << 1), (1 << 2), (1 << 3), (1 << 4), (1 << 5), (1 << 6), (1 << 7), (1 << 8), (1 << 9), (1 << 10), (1 << 11), (1 << 12), (1 << 13), (1 << 14), (1 << 15),
             (1 << 16), (1 << 17), (1 << 18), (1 << 19), (1 << 20), (1 << 21), (1 << 22), (1 << 23), (1 << 24), (1 << 25), (1 << 26), (1 << 27), (1 << 28), (1 << 29), (1 << 30), ((uint32_t)1 << 31),
@@ -46,10 +46,14 @@ class cpu{
 
         int search_iterate(Board &board);
         int search_widen(Board &board, int depth, int val);
+        int search_root(Board &board, int depth, int alpha, int beta);
         int search(Board &board, int depth, int ply, int alpha, int beta);
-        int quiesce(Board &board, int alpha, int beta);
+        int quiesce(Board &board, int ply, int alpha, int beta);
         int eval(Board board);
-        std::vector<Move> order_moves(std::map<Move, int> score_map);
+        int draw_eval(Board &board);
+        void set_killers(Move m, int ply);
+        void set_move_scores(Move * m, int movecount, int ply);
+        void order_moves(int movecount, Move * m, int current);
 };
 
 class time_manager{
