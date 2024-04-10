@@ -2,13 +2,11 @@
 
 //returns the nubmer of 1 bits in a bitboard
 //aka the "Hamming Weight"
-int count_bits(uint32_t bb){
-    int count = 0;
-    while(bb){
-        count++;
-        bb&= bb-1;
-    }
-    return count;
+int count_bits(uint32_t bb)
+{
+   int r;
+   for(r = 0; bb; r++, bb &= bb - 1);
+   return r;
 }
 
 //converts a square index (according to the chart above) to its bitboard representation
