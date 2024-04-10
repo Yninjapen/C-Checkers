@@ -1,12 +1,16 @@
 #include <iostream>
 #include "cpu.hpp"
-//#include "new_cpu.hpp"
+#include "new_cpu.hpp"
 #include "board.hpp"
 
 int main(){
     Board board;
     std::vector<Move> move_history;
-    Move initial_pos(4095, 4293918720, 0, 1);
+    Move initial_pos;(4095, 4293918720, 0, 1);
+    initial_pos.reds = 4095;
+    initial_pos.blacks = 4293918720;
+    initial_pos.kings = 0;
+    initial_pos.color = 1;
     move_history.push_back(initial_pos);
 
     int x;
@@ -27,19 +31,23 @@ int main(){
 
     double thinking_time = get_time() - 3000;
 
-    while(!board.game_over){
+    Move movelist[64];
+    int movecount = board.gen_moves(movelist);
+
+    while(!board.check_win() && !board.check_repetition()){
         board.print_board();
+
         if (board.turn == player_color){
             thinking_time = get_time();
-            for (int i = 0; i < board.legal_moves.size(); i++){
+            for (int i = 0; i < movecount; i++){
                 std::cout << i << ": ";
-                board.legal_moves[i].get_move_info(board.get_all_pieces());
+                movelist[i].get_move_info(board.get_all_pieces());
                 std::cout << ", ";
             }
             std::cout << "\n";
             std::cin >> x;
-            if ((0 <= x) && (x < board.legal_moves.size())){
-                Move m = board.legal_moves[x];
+            if ((0 <= x) && (x < movecount)){
+                Move m = movelist[x];
                 board.push_move(m);
                 move_history.push_back(m);
             }
@@ -63,6 +71,8 @@ int main(){
             board.push_move(m);
             move_history.push_back(m);
         }
+        movelist[64];
+        movecount = board.gen_moves(movelist);
     }
 
     board.print_board();

@@ -4,6 +4,10 @@
 #ifndef BOARD_H
 #define BOARD_H
 
+#define TAKE_SORT 1000
+#define PROMO_SORT 1100
+#define KILLER_SORT 100000
+
 #include <vector>
 #include <math.h>
 #include <map>
@@ -12,30 +16,27 @@
 #include "misc.hpp"
 #include "move_tables.hpp"
 
-class Move{
+struct Move{
+    uint32_t reds;
+    uint32_t blacks;
+    uint32_t kings;
+    uint32_t to;
+    uint32_t from;
 
-    public:
-        uint32_t reds;
-        uint32_t blacks;
-        uint32_t kings;
-        uint32_t to;
-        uint32_t from;
-    
-        int color;
-        bool is_take;
-        bool is_promo;
-        int score = 0;
+    int color;
+    bool is_take;
+    bool is_promo;
+    int score = 0;
 
-        Move(uint32_t r = 0, uint32_t b = 0, uint32_t k = 0, uint32_t to = 0, uint32_t from = 0, int c = 0, bool promo = false, bool take = false);
-        void get_move_info(const uint32_t previous_pos);
-        uint32_t get_end_square(const uint32_t previous_pos);
+    void get_move_info(const uint32_t previous_pos) const;
+    uint32_t get_end_square(const uint32_t previous_pos) const;
 
-        bool operator <(const Move& other) const{
-            return hash_bb(reds, blacks, kings, color) < hash_bb(other.reds, other.blacks, other.kings, other.color);
-        }
-        bool operator ==(const Move& other) const{
-            return (reds == other.reds) && (blacks == other.blacks) && (kings == other.kings);
-        }
+    bool operator <(const Move& other) const{
+        return hash_bb(reds, blacks, kings, color) < hash_bb(other.reds, other.blacks, other.kings, other.color);
+    }
+    bool operator ==(const Move& other) const{
+        return (reds == other.reds) && (blacks == other.blacks) && (kings == other.kings);
+    }
 };
 
 /* Bitboard configuration
@@ -67,14 +68,15 @@ class Board{
         uint32_t black_bb;
         uint32_t king_bb;
         bool has_takes;
-        int movecount;
+        int moves_played;
         int turn;
         Board();
 
         void print_board();
         uint32_t get_all_pieces();
 
-        std::vector<Move> legal_moves;
+        int movecount;
+        Move * m;
         Move get_random_move();
         void set_random_pos(int moves_to_play);
         void push_move(Move move);
@@ -84,8 +86,9 @@ class Board{
         uint32_t get_red_jumpers();
         uint32_t get_black_jumpers();
 
-        int is_game_over();
-        int game_over;
+        int gen_moves(Move * moves);
+        int check_win();
+        int check_repetition();
     
     private:
         int moves_since_take;
@@ -93,10 +96,19 @@ class Board{
         const uint32_t MASK_L5 = S[ 4] | S[ 5] | S[ 6] | S[12] | S[13] | S[14] | S[20] | S[21] | S[22];
         const uint32_t MASK_R3 = S[28] | S[29] | S[30] | S[20] | S[21] | S[22] | S[12] | S[13] | S[14] | S[ 4] | S[ 5] | S[ 6];
         const uint32_t MASK_R5 = S[25] | S[26] | S[27] | S[17] | S[18] | S[19] | S[ 9] | S[10] | S[11];
-        void gen_moves();
+        const uint32_t ROW1 = S[ 1] | S[ 2] | S[ 3] | S[ 4];
+        const uint32_t ROW2 = S[ 5] | S[ 6] | S[ 7] | S[ 8];
+        const uint32_t ROW3 = S[ 9] | S[10] | S[11] | S[12];
+        const uint32_t ROW4 = S[13] | S[14] | S[15] | S[16];
+        const uint32_t ROW5 = S[17] | S[18] | S[19] | S[20];
+        const uint32_t ROW6 = S[21] | S[22] | S[23] | S[24];
+        const uint32_t ROW7 = S[25] | S[26] | S[27] | S[28];
+        const uint32_t ROW8 = S[29] | S[30] | S[31] | S[32];
+
         bool add_red_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings);
         bool add_black_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings);
         bool can_jump(uint32_t piece, int color);
-        // movegen_push();
+        void movegen_push(uint32_t new_reds, uint32_t new_blacks, uint32_t new_kings, uint32_t to, uint32_t from, int color, bool is_promo, bool is_take);
+        int get_tempo_score(uint32_t piece, int color);
 };
 #endif
