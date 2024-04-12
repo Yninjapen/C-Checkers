@@ -1,6 +1,10 @@
 //https://3dkingdoms.com/checkers/bitboards.htm
 //https://github.com/jonkr2/GuiNN_Checkers/blob/main/src
 
+/*TODO:
+  -cap the pos_history at 50, because that is the biggest
+    it can get without a draw occurring
+  */
 #ifndef BOARD_H
 #define BOARD_H
 
@@ -89,6 +93,7 @@ class Board{
         int gen_moves(Move * moves);
         int check_win();
         int check_repetition();
+        void clear_pos_history();
     
     private:
         int moves_since_take;

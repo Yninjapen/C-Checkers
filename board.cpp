@@ -719,8 +719,10 @@ bool Board::can_jump(uint32_t piece, int color){
 //NOTE: I'm not entirely sure if this works its a little iffy for some reason
 Move Board::get_random_move(){
    srand(time(NULL));
+   Move arr[64];
+   gen_moves(arr);
    int index = rand() % movecount;
-   return m[movecount];
+   return arr[index];
 }
 
 //sets the board to a random position by playing a "moves_to_play" random moves
@@ -764,6 +766,10 @@ int Board::check_repetition(){
       return 1;
    }
    return 0;
+}
+
+void Board::clear_pos_history(){
+   pos_history.clear();
 }
 
 uint32_t Move::get_end_square(const uint32_t previous_pos) const{
