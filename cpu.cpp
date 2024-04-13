@@ -184,7 +184,9 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta){
            those positions cannot possibly occur again. We check if there are any kings
            on the board first so that we don't unnecessarily try to clear the history when
            there was nothing being tracked in the first place. */
-        if (movelist[i].kings && (!(movelist[i].kings & movelist[i].to) || movelist[i].is_take)) {
+        if (board.king_bb
+        && (!(board.king_bb & current_move.from) //  Checks if it is a pawn move
+        || current_move.is_take)) {              //  Checks if it is a take
             board2.clear_pos_history();
         }
 
@@ -226,6 +228,22 @@ int cpu::quiesce(Board &board, int ply, int alpha, int beta){
     if (search_cancelled) return 0;
     if (board.check_repetition())return draw_eval(board);
 
+    /* Generate legal moves*/
+    Move movelist[64];
+    int movecount = board.gen_moves(movelist);
+
+    /* Check if the game is over */
+    if (!movecount){
+        return -MAX_VAL + ply;
+    }
+
+    /* Never end on a position where there is a forced move */
+    else if (movecount == 1){
+        Board board2(board);
+        board2.push_move(movelist[0]);
+        return -quiesce(board2, ply + 1, -beta, -alpha);
+    }
+
     /* Get an evaluation of the current position.*/
     int val = eval(board);
     int stand_pat = val;
@@ -236,14 +254,6 @@ int cpu::quiesce(Board &board, int ply, int alpha, int beta){
     /* Check if the evaluation becomes the new alpha */
     if (alpha < val) alpha = val;
 
-    Move movelist[64];
-    int movecount = board.gen_moves(movelist);
-
-    /* Check if the game is over */
-    if (!movecount){
-        return -MAX_VAL + ply;
-    }
-
     for (int i = 0; i < movecount; i++){
         order_moves(movecount, movelist, i);
 
@@ -251,6 +261,13 @@ int cpu::quiesce(Board &board, int ply, int alpha, int beta){
         if (!(movelist[i].is_take || movelist[i].is_promo)) continue;
 
         Board board2(board);
+
+        /* We know that this move is either a take or a promotion, and
+           in either case we should be clearing the pos_history */
+        if (board.king_bb) {
+            board2.clear_pos_history();
+        }
+
         board2.push_move(movelist[i]);
 
         val = -quiesce(board2, ply + 1, -beta, -alpha);
@@ -276,7 +293,9 @@ int cpu::search_root(Board &board, int depth, int alpha, int beta){
         Board board2(board);
 
         /* Handles clearing the position history */
-        if (movelist[i].kings && (!(movelist[i].kings & movelist[i].to) || movelist[i].is_take)) {
+        if (board.king_bb 
+        && (!(board.king_bb & movelist[i].from) //  Checks if it is a pawn move
+        || movelist[i].is_take)) {              //  Checks if it is a take
             board2.clear_pos_history();
         }
 
