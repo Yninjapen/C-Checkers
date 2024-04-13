@@ -226,7 +226,7 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta){
 int cpu::quiesce(Board &board, int ply, int alpha, int beta){
     nodes_traversed++;
     if (search_cancelled) return 0;
-    if (board.check_repetition())return draw_eval(board);
+    if (board.check_repetition()) return draw_eval(board);
 
     /* Generate legal moves*/
     Move movelist[64];
@@ -350,7 +350,7 @@ int cpu::search_iterate(Board &board){
     current_depth = 2;
     /* Searches with increasing depth until the time is up */
     while (!search_cancelled){
-        if (move_count == 1 && current_depth == 5){
+        if ((move_count == 1 && current_depth == 5) || abs(val) > 5000){
             search_cancelled = true;
             break;
         }
