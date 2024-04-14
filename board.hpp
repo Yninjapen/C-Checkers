@@ -19,6 +19,29 @@
 #include <cassert>
 #include "misc.hpp"
 #include "move_tables.hpp"
+const uint32_t S[34] = {
+            (1 << 0), (1 << 1), (1 << 2), (1 << 3), (1 << 4), (1 << 5), (1 << 6), (1 << 7), (1 << 8), (1 << 9), (1 << 10), (1 << 11), (1 << 12), (1 << 13), (1 << 14), (1 << 15),
+            (1 << 16), (1 << 17), (1 << 18), (1 << 19), (1 << 20), (1 << 21), (1 << 22), (1 << 23), (1 << 24), (1 << 25), (1 << 26), (1 << 27), (1 << 28), (1 << 29), (1 << 30), ((uint32_t)1 << 31),
+            0, 0 //     invalid no bits set
+        };
+const uint32_t MASK_L3 = S[ 1] | S[ 2] | S[ 3] | S[ 9] | S[10] | S[11] | S[17] | S[18] | S[19] | S[25] | S[26] | S[27];
+const uint32_t MASK_L5 = S[ 4] | S[ 5] | S[ 6] | S[12] | S[13] | S[14] | S[20] | S[21] | S[22];
+const uint32_t MASK_R3 = S[28] | S[29] | S[30] | S[20] | S[21] | S[22] | S[12] | S[13] | S[14] | S[ 4] | S[ 5] | S[ 6];
+const uint32_t MASK_R5 = S[25] | S[26] | S[27] | S[17] | S[18] | S[19] | S[ 9] | S[10] | S[11];
+
+const uint32_t MASK_L1 = ~(S[0] | S[4] | S[ 8] | S[12] | S[16] | S[20] | S[24] | S[28]);
+const uint32_t MASK_R1 = ~(S[3] | S[7] | S[11] | S[15] | S[19] | S[23] | S[27] | S[31]);
+const uint32_t MASK_L8 = ~(S[28] | S[29] | S[30] | S[31]);
+const uint32_t MASK_R8 = ~(S[ 0] | S[ 1] | S[ 2] | S[ 3]);
+
+const uint32_t ROW1 = S[ 0] | S[ 1] | S[ 2] | S[ 3];
+const uint32_t ROW2 = S[ 4] | S[ 5] | S[ 6] | S[ 7];
+const uint32_t ROW3 = S[ 8] | S[ 9] | S[10] | S[11];
+const uint32_t ROW4 = S[12] | S[13] | S[14] | S[15];
+const uint32_t ROW5 = S[16] | S[17] | S[18] | S[19];
+const uint32_t ROW6 = S[20] | S[21] | S[22] | S[23];
+const uint32_t ROW7 = S[24] | S[25] | S[26] | S[27];
+const uint32_t ROW8 = S[28] | S[29] | S[30] | S[31];
 
 struct Move{
     uint32_t reds;
@@ -62,11 +85,7 @@ class Board{
     const int max_moves_without_take = 50;
 
     public:
-        const uint32_t S[34] = {
-            (1 << 0), (1 << 1), (1 << 2), (1 << 3), (1 << 4), (1 << 5), (1 << 6), (1 << 7), (1 << 8), (1 << 9), (1 << 10), (1 << 11), (1 << 12), (1 << 13), (1 << 14), (1 << 15),
-            (1 << 16), (1 << 17), (1 << 18), (1 << 19), (1 << 20), (1 << 21), (1 << 22), (1 << 23), (1 << 24), (1 << 25), (1 << 26), (1 << 27), (1 << 28), (1 << 29), (1 << 30), ((uint32_t)1 << 31),
-            0, 0 //     invalid no bits set
-        };
+        
 
         uint32_t red_bb;
         uint32_t black_bb;
@@ -97,18 +116,6 @@ class Board{
     
     private:
         int moves_since_take;
-        const uint32_t MASK_L3 = S[ 1] | S[ 2] | S[ 3] | S[ 9] | S[10] | S[11] | S[17] | S[18] | S[19] | S[25] | S[26] | S[27];
-        const uint32_t MASK_L5 = S[ 4] | S[ 5] | S[ 6] | S[12] | S[13] | S[14] | S[20] | S[21] | S[22];
-        const uint32_t MASK_R3 = S[28] | S[29] | S[30] | S[20] | S[21] | S[22] | S[12] | S[13] | S[14] | S[ 4] | S[ 5] | S[ 6];
-        const uint32_t MASK_R5 = S[25] | S[26] | S[27] | S[17] | S[18] | S[19] | S[ 9] | S[10] | S[11];
-        const uint32_t ROW1 = S[ 1] | S[ 2] | S[ 3] | S[ 4];
-        const uint32_t ROW2 = S[ 5] | S[ 6] | S[ 7] | S[ 8];
-        const uint32_t ROW3 = S[ 9] | S[10] | S[11] | S[12];
-        const uint32_t ROW4 = S[13] | S[14] | S[15] | S[16];
-        const uint32_t ROW5 = S[17] | S[18] | S[19] | S[20];
-        const uint32_t ROW6 = S[21] | S[22] | S[23] | S[24];
-        const uint32_t ROW7 = S[25] | S[26] | S[27] | S[28];
-        const uint32_t ROW8 = S[29] | S[30] | S[31] | S[32];
 
         bool add_red_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings);
         bool add_black_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings);

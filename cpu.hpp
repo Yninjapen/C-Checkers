@@ -19,6 +19,7 @@ class cpu{
 
     public:
         int color;
+        int nodes_traversed;
         cpu(int cpu_color = 0, int cpu_depth = 10);
         Move max_depth_search(Board &board, bool feedback = true);
         Move time_search(Board &board, double t_limit, bool feedback = true);
@@ -42,7 +43,6 @@ class cpu{
                                         square_map[21] | square_map[22];
         double search_start = time(NULL);
         bool search_cancelled = false;
-        int nodes_traversed;
         Move move_to_make;
 
         int search_iterate(Board &board);
