@@ -1,6 +1,11 @@
 #ifndef CPU_H
 #define CPU_H
 
+#define DO_NULL    1
+#define NO_NULL    0
+#define IS_PV      1
+#define NO_PV      0
+
 #include <algorithm>
 #include <iostream>
 #include <map>
@@ -47,13 +52,14 @@ class cpu{
 
         int search_iterate(Board &board);
         int search_widen(Board &board, int depth, int val);
-        int search(Board &board, int depth, int ply, int alpha, int beta);
+        int search(Board &board, int depth, int ply, int alpha, int beta, int is_pv);
         int quiesce(Board &board, int ply, int alpha, int beta);
         int eval(Board board);
         int draw_eval(Board &board);
         void set_killers(Move m, int ply);
         void set_move_scores(Move * m, int movecount, int ply);
         void order_moves(int movecount, Move * m, int current);
+        void order_at_root(int movecount, Move * m, int current);
 };
 
 class time_manager{

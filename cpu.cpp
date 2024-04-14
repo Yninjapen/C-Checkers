@@ -149,14 +149,13 @@ void cpu::set_move_scores(Move * m, int movecount, int ply){
 
 Returns an integer evaluation of the position passed in.
 */
-int cpu::search(Board &board, int depth, int ply, int alpha, int beta){
+int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv){
     nodes_traversed++;
 
     /* Cancels the search if time has run out */
     if (search_cancelled) return 0;
 
     int val = -MAX_VAL;
-    int raised_alpha = 0;
     Move movelist[64];
     Move current_move;
 
@@ -164,7 +163,7 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta){
        that we will search until there are no more takes or promotions
        left on the board, to ensure only relatively quiet positions 
        are evaluated. */
-    if (depth < 1) return quiesce(board, ply + 1, alpha, beta);
+    if (depth < 1) return quiesce(board, ply, alpha, beta);
 
     /* Checks that the current position is not a draw by repetition
        or 50-move rule. */
@@ -192,7 +191,7 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta){
 
         board2.push_move(current_move);
 
-        val = -search(board2, new_depth, ply + 1, -beta, -alpha);
+        val = -search(board2, new_depth, ply + 1, -beta, -alpha, is_pv);
 
         if (search_cancelled) return 0;
         if (val > alpha){
@@ -289,8 +288,10 @@ int cpu::search_root(Board &board, int depth, int alpha, int beta){
     int val = 0;
 
     for (int i = 0; i < movecount; i++){
-        order_moves(movecount, movelist, i);
         Board board2(board);
+
+        /* Puts the current best move at the front of the movelist */
+        order_at_root(movecount, movelist, i);
 
         /* Handles clearing the position history */
         if (board.king_bb 
@@ -301,14 +302,14 @@ int cpu::search_root(Board &board, int depth, int alpha, int beta){
 
         board2.push_move(movelist[i]);
 
-        val = -search(board2, depth - 1, 0, -beta, -alpha);
+        val = -search(board2, depth - 1, 0, -beta, -alpha, IS_PV);
 
         /* If the search was cancelled, move on, because we 
            cannot trust the last search as it was cut short. */
         if (search_cancelled) break;
 
         if (val > alpha){
-            /* Update the best move*/
+            /* Update the best move */
             move_to_make = movelist[i];
             if (val > beta) return beta;
 
@@ -334,9 +335,7 @@ int cpu::search_widen(Board &board, int depth, int val){
     /* If the narrower search fails, we have to re-search with -INF, INF as our window. 
        This is very costly, but more often then not narrowing the window saves time. */
     if (temp <= alpha || temp >= beta){
-        if (search_cancelled){
-            return val;
-            }
+        if (search_cancelled) return val;
         temp = search_root(board, depth, -MAX_VAL, MAX_VAL);
     }
     if (search_cancelled){
@@ -414,6 +413,24 @@ void cpu::order_moves(int movecount, Move * m, int current){
     for(int i=current+1; i < movecount; i++){
         if (m[i].score > m[high].score){
             high = i;
+        }
+    }
+
+    Move temp = m[high];
+    m[high] = m[current];
+    m[current] = temp;
+}
+
+void cpu::order_at_root(int movecount, Move * m, int current){
+    int high = current;
+
+    for(int i=current+1; i < movecount; i++){
+        if ((m[i].score > m[high].score)){
+            high = i;
+        }
+        if (m[i] == move_to_make){
+            high = i;
+            break;
         }
     }
 
