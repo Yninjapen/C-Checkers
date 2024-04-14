@@ -320,10 +320,14 @@ int cpu::search_root(Board &board, int depth, int alpha, int beta){
 
 /* Handles narrowing the aspiration window */
 int cpu::search_widen(Board &board, int depth, int val){
-    /* Narrow the search window, using the last search's value as a basis */
     int temp = val;
-    int alpha = val - 30;
-    int beta = val + 30;
+
+    /* Narrow the search window, using the last search's value as a basis.
+       Using 25 / log10(d + 2) lets us narrow the window as the search gets
+       deeper. */
+    int window = 25 / log10(depth + 2);
+    int alpha = val - window;
+    int beta = val + window;
 
     temp = search_root(board, depth, alpha, beta);
 
