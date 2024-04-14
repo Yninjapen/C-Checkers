@@ -1,6 +1,6 @@
 #include <iostream>
 #include "cpu.hpp"
-#include "new_cpu.hpp"
+//#include "new_cpu.hpp"
 #include "board.hpp"
 
 int main(){
@@ -18,7 +18,7 @@ int main(){
     int cpu_depth = 10;
     double t = 1;
 
-    std::cout << "type 0 to play as Red, 1 to play as black: ";
+    std::cout << "type 0 to play as Red, 1 to play as Black: ";
     std::cin >> player_color;
     std::cout << "\ncpu max depth: ";
     std::cin >> cpu_depth;
