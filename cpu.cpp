@@ -185,7 +185,7 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
            there was nothing being tracked in the first place. */
         if (board.king_bb
         && (!(board.king_bb & current_move.from) //  Checks if it is a pawn move
-        || current_move.is_take)) {              //  Checks if it is a take
+        || current_move.pieces_taken)) {              //  Checks if it is a take
             board2.clear_pos_history();
         }
 
@@ -199,7 +199,7 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
 
                 /* If we encounter a good move, we save it as a "killer" move. Then, in future searches,
                    we can evaluate these moves first, which massively improves the efficiency of the search. */
-                if (!current_move.is_take && !current_move.is_promo){
+                if (!current_move.pieces_taken && !current_move.is_promo){
                     set_killers(current_move, ply);
                 }
 
@@ -257,7 +257,7 @@ int cpu::quiesce(Board &board, int ply, int alpha, int beta){
         order_moves(movecount, movelist, i);
 
         /* If the current move is not a take or a promotion, we do not worry about it */
-        if (!(movelist[i].is_take || movelist[i].is_promo)) continue;
+        if (!(movelist[i].pieces_taken || movelist[i].is_promo)) continue;
 
         Board board2(board);
 
@@ -296,7 +296,7 @@ int cpu::search_root(Board &board, int depth, int alpha, int beta){
         /* Handles clearing the position history */
         if (board.king_bb 
         && (!(board.king_bb & movelist[i].from) //  Checks if it is a pawn move
-        || movelist[i].is_take)) {              //  Checks if it is a take
+        || movelist[i].pieces_taken)) {              //  Checks if it is a take
             board2.clear_pos_history();
         }
 
@@ -366,7 +366,7 @@ int cpu::search_iterate(Board &board){
 
 /* Handles setting the killer moves */
 void cpu::set_killers(Move m, int ply){
-    if (!m.is_take){
+    if (!m.pieces_taken){
         if (m.from != killers[ply][0].from || m.to != killers[ply][0].to){
             killers[ply][1] = killers[ply][0];
         }

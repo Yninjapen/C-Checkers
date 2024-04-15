@@ -51,10 +51,11 @@ struct Move{
     uint32_t from;
 
     int color;
-    bool is_take;
+    int pieces_taken;
     bool is_promo;
     int score = 0;
-
+    
+    bool is_unreversible();
     void get_move_info(const uint32_t previous_pos) const;
     uint32_t get_end_square(const uint32_t previous_pos) const;
 
@@ -117,10 +118,10 @@ class Board{
     private:
         int moves_since_take;
 
-        bool add_red_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings);
-        bool add_black_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings);
+        bool add_red_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings, int pieces_taken);
+        bool add_black_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings, int pieces_taken);
         bool can_jump(uint32_t piece, int color);
-        void movegen_push(uint32_t new_reds, uint32_t new_blacks, uint32_t new_kings, uint32_t to, uint32_t from, int color, bool is_promo, bool is_take);
+        void movegen_push(uint32_t new_reds, uint32_t new_blacks, uint32_t new_kings, uint32_t to, uint32_t from, int color, bool is_promo, int pieces_taken);
         int get_tempo_score(uint32_t piece, int color);
 };
 #endif
