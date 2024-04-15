@@ -1,6 +1,6 @@
 #include <iostream>
 #include "cpu.hpp"
-//#include "new_cpu.hpp"
+#include "new_cpu.hpp"
 #include "board.hpp"
 
 int main(){
@@ -17,6 +17,7 @@ int main(){
     int player_color; //0 == red, 1 == black
     int cpu_depth = 10;
     double t = 1;
+    bool undone = false;
 
     std::cout << "type 0 to play as Red, 1 to play as Black: ";
     std::cin >> player_color;
@@ -32,6 +33,7 @@ int main(){
     double thinking_time = get_time() - 3000;
 
     Move movelist[64];
+    Move m;
     int movecount = board.gen_moves(movelist);
 
     while(!board.check_win() && !board.check_repetition()){
@@ -47,30 +49,35 @@ int main(){
             std::cout << "\n";
             std::cin >> x;
             if ((0 <= x) && (x < movecount)){
-                Move m = movelist[x];
-                board.push_move(m);
-                move_history.push_back(m);
+                m = movelist[x];
             }
             else{
                 if (move_history.size() >= 2){
                     board.undo(move_history[move_history.size() - 2], move_history[move_history.size() - 1]);
                     move_history.pop_back();
+                    undone = true;
                 }
                 if (move_history.size() >= 2){
                     board.undo(move_history[move_history.size() - 2], move_history[move_history.size() - 1]);
                     move_history.pop_back();
+                    undone = true;
                 }
             }
-            // Move m = cpu2.time_search(board, t);
-            // board.push_move(m);
-            // move_history.push_back(m);
+            // m = cpu2.time_search(board, t);
         }
         else{
             //t = (get_time() - thinking_time)/2000;
-            Move m = cpu1.time_search(board, t);
+            m = cpu1.time_search(board, t);
+        }
+        
+        if (!undone){
+            if (m.is_unreversible()){
+                board.clear_pos_history();
+            }
             board.push_move(m);
             move_history.push_back(m);
         }
+        undone = false;
         movelist[64];
         movecount = board.gen_moves(movelist);
     }
