@@ -1,6 +1,5 @@
 #include <iostream>
 #include "cpu.hpp"
-#include "new_cpu.hpp"
 #include "board.hpp"
 
 int main(){
@@ -18,19 +17,30 @@ int main(){
     int cpu_depth = 10;
     double t = 1;
     bool undone = false;
+    bool is_depth_search = true;
+    bool is_cpu_game = false;
 
-    std::cout << "type 0 to play as Red, 1 to play as Black: ";
+    std::cout << "Play as Red(0) or Black(1) (or 2 to have the cpu play itself): ";
     std::cin >> player_color;
-    std::cout << "\ncpu max depth: ";
-    std::cin >> cpu_depth;
-    std::cout << "\ntime limit for cpu (seconds): ";
-    std::cin >> t;
+    std::cout << "\nTime Search(0) or Depth Search(1)?: ";
+    std::cin >> is_depth_search;
+
+    if (is_depth_search){
+        std::cout << "\ncpu max depth: ";
+        std::cin >> cpu_depth;
+    }
+    else{
+        std::cout << "\ntime limit for cpu (seconds): ";
+        std::cin >> t;
+    }
     std::cout << "\n";
 
+    if (player_color > 1){
+        is_cpu_game = true;
+        player_color = 1;
+    }
     cpu cpu1(1 - player_color, cpu_depth);
     cpu cpu2(player_color, cpu_depth);
-
-    double thinking_time = get_time() - 3000;
 
     Move movelist[64];
     Move m;
@@ -39,8 +49,7 @@ int main(){
     while(!board.check_win() && !board.check_repetition()){
         board.print_board();
 
-        if (board.turn == player_color){
-            thinking_time = get_time();
+        if ((board.turn == player_color) && !is_cpu_game){
             for (int i = 0; i < movecount; i++){
                 std::cout << i << ": ";
                 movelist[i].get_move_info(board.get_all_pieces());
@@ -63,11 +72,14 @@ int main(){
                     undone = true;
                 }
             }
-            // m = cpu2.time_search(board, t);
         }
         else{
-            //t = (get_time() - thinking_time)/2000;
-            m = cpu1.time_search(board, t);
+            if (is_depth_search){
+                m = cpu1.max_depth_search(board, true);
+            }
+            else{
+                m = cpu1.time_search(board, t);
+            }
         }
         
         if (!undone){
