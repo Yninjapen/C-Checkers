@@ -390,7 +390,7 @@ Move cpu::max_depth_search(Board &board, bool feedback){
     int val = search_root(board, max_depth, -MAX_VAL, MAX_VAL);
 
     if (feedback){
-        std::cout << "The best move has a value of " << val/75;
+        std::cout << "The best move has a value of " << (double)val/75;
     }
     return move_to_make;
 }
@@ -461,7 +461,7 @@ Move cpu::time_search(Board &board, double t_limit, bool feedback){
     int val = search_iterate(board);
     
     if (feedback){
-        std::cout << "The best move has a value of " << val << ", max depth reached was " << current_depth - 1;
+        std::cout << "The best move has a value of " << (double)val/75 << ", max depth reached was " << current_depth - 1;
         std::cout << ", time elapsed: " << get_time() - search_start << " milliseconds\n";
         std::cout << "Nodes Traversed: " << nodes_traversed << "\n";
     }
