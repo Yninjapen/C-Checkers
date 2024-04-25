@@ -4,9 +4,11 @@
 //aka the "Hamming Weight"
 int count_bits(uint32_t bb)
 {
-   int r;
-   for(r = 0; bb; r++, bb &= bb - 1);
-   return r;
+   #ifdef __GNUC__	
+	   return __builtin_popcountll(bb);
+   #else
+	   return _mm_popcnt_u32(bb);
+   #endif
 }
 
 //converts a square index (according to the chart above) to its bitboard representation

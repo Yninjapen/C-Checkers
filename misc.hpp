@@ -6,6 +6,7 @@
 #include <iostream>
 #include <bitset>
 #include <chrono>
+#include <nmmintrin.h>
 
 int count_bits(uint32_t bb);
 uint32_t square_to_binary(const int square);
