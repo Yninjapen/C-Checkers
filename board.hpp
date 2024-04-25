@@ -130,23 +130,6 @@ class Board{
         bool add_black_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings, int pieces_taken);
         bool can_jump(uint32_t piece, int color) const;
         void movegen_push(uint32_t new_reds, uint32_t new_blacks, uint32_t new_kings, uint32_t to, uint32_t from, int color, bool is_promo, int pieces_taken);
-        
-        inline int get_tempo_score(uint32_t piece, int color) const{
-            if (color){
-                if (piece & ROW5) return 100;
-                if (piece & ROW4) return 200;
-                if (piece & ROW3) return 300;
-                if (piece & ROW2) return 400;
-                if (piece & ROW1) return 500;
-            }
-            else{
-                if (piece & ROW4) return 100;
-                if (piece & ROW5) return 200;
-                if (piece & ROW6) return 300;
-                if (piece & ROW7) return 400;
-                if (piece & ROW8) return 500;
-            }
-            return 0;
-        }
+        int get_tempo_score(uint32_t piece, int color) const;
 };
 #endif
