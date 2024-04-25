@@ -17,8 +17,7 @@ double get_time();
 
 //hashes the bitboard
 inline uint64_t hash_bb(uint32_t reds, uint32_t blacks, uint32_t kings, int turn){
-   const unsigned int hash = ((reds * 37 + blacks) * 37 + kings) * 37 + turn;
-   return hash;
+   return ((reds * 37 + blacks) * 37 + kings) * 37 + turn;
 }
 
 #endif
