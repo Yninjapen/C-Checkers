@@ -27,10 +27,6 @@ Board::Board(){
    moves_since_take = 0;
 }
 
-uint32_t Board::get_all_pieces(){
-   return red_bb | black_bb;
-}
-
 //prints a representation of the board to the console
 void Board::print_board(){
    char arr[32] = {' '};
@@ -102,7 +98,6 @@ void Board::print_board(){
 
 //takes in a Move object, and changes the board state accordingly
 void Board::push_move(Move move){
-   const uint32_t all = get_all_pieces();
    moves_played++;
 
    red_bb = move.reds;
@@ -139,7 +134,7 @@ void Board::undo(Move prev_pos, Move curr_pos){
    king_bb = prev_pos.kings;
 }
 
-uint32_t Board::get_red_movers(){
+uint32_t Board::get_red_movers() const{
    const uint32_t empty = ~(red_bb | black_bb);
    uint32_t movers = (empty) >> 4;
    const uint32_t red_kings = red_bb & king_bb;
@@ -155,7 +150,7 @@ uint32_t Board::get_red_movers(){
    return movers;
 }
 
-uint32_t Board::get_black_movers(){
+uint32_t Board::get_black_movers() const{
    const uint32_t empty = ~(red_bb | black_bb);
    uint32_t movers = (empty) << 4;
    const uint32_t black_kings = black_bb & king_bb;
@@ -171,13 +166,12 @@ uint32_t Board::get_black_movers(){
    return movers;
 }
 
-uint32_t Board::get_red_jumpers(){
+uint32_t Board::get_red_jumpers() const{
    const uint32_t empty = ~(red_bb | black_bb);
-   uint32_t jumpers = 0;
    const uint32_t red_kings = red_bb & king_bb;
 
    uint32_t temp = (empty >> 4) & black_bb;
-   jumpers |= (((temp & MASK_R3) >> 3) | ((temp & MASK_R5) >> 5));
+   uint32_t jumpers = (((temp & MASK_R3) >> 3) | ((temp & MASK_R5) >> 5));
    temp = (((empty & MASK_R3) >> 3) | ((empty & MASK_R5) >> 5)) & black_bb;
    jumpers |= (temp >> 4);
    jumpers &= red_bb;
@@ -191,7 +185,7 @@ uint32_t Board::get_red_jumpers(){
    return jumpers;
 }
 
-uint32_t Board::get_black_jumpers(){
+uint32_t Board::get_black_jumpers() const{
    const uint32_t empty = ~(red_bb | black_bb);
    uint32_t jumpers = 0;
    const uint32_t black_kings = black_bb & king_bb;
@@ -424,15 +418,20 @@ int Board::gen_moves(Move * moves){
 
       if (jumpers){
          has_takes = true;
-         uint32_t new_reds;
-         uint32_t new_blacks;
-         uint32_t new_kings;
-         while (jumpers){
-            const uint32_t piece = jumpers & -jumpers;
-            const uint32_t adjusted_black = (black_bb & ~piece);
+         uint32_t new_reds,
+                  new_blacks,
+                  new_kings,
+                  taken,
+                  dest,
+                  piece,
+                  adjusted_black;
 
-            uint32_t taken = (piece >> 4) & red_bb;
-            uint32_t dest = (((taken & MASK_R3) >> 3) | ((taken & MASK_R5) >> 5)) & empty;
+         while (jumpers){
+            piece = jumpers & -jumpers;
+            adjusted_black = (black_bb & ~piece);
+
+            taken = (piece >> 4) & red_bb;
+            dest = (((taken & MASK_R3) >> 3) | ((taken & MASK_R5) >> 5)) & empty;
             if (piece & king_bb){ //King takes
                const uint32_t adjusted_kings = (king_bb & ~piece);
                if (taken && dest){
@@ -503,10 +502,11 @@ int Board::gen_moves(Move * moves){
       }
       else{    //Regular moves
          uint32_t movers = get_black_movers();
+         uint32_t piece, dest;
 
          while (movers){
-            const uint32_t piece = movers & -movers;
-            uint32_t dest = (piece >> 4) & empty;
+            piece = movers & -movers;
+            dest = (piece >> 4) & empty;
 
             if (piece & king_bb){ // king moves
                if (dest){
@@ -548,16 +548,20 @@ int Board::gen_moves(Move * moves){
       uint32_t jumpers = get_red_jumpers();
       if (jumpers){
          has_takes = true;
-         uint32_t new_reds;
-         uint32_t new_blacks;
-         uint32_t new_kings;
+         uint32_t new_reds,
+                  new_blacks,
+                  new_kings,
+                  taken,
+                  dest,
+                  piece,
+                  adjusted_red;
 
          while (jumpers){ // takes
-            const uint32_t piece = jumpers & -jumpers;
-            const uint32_t adjusted_red = (red_bb & ~piece);
+            piece = jumpers & -jumpers;
+            adjusted_red = (red_bb & ~piece);
 
-            uint32_t taken = (piece << 4) & black_bb;
-            uint32_t dest = (((taken & MASK_L3) << 3) | ((taken & MASK_L5) << 5)) & empty;
+            taken = (piece << 4) & black_bb;
+            dest = (((taken & MASK_L3) << 3) | ((taken & MASK_L5) << 5)) & empty;
 
             if (piece & king_bb){ // king takes
                const uint32_t adjusted_kings = (king_bb & ~piece);
@@ -632,10 +636,11 @@ int Board::gen_moves(Move * moves){
       }
       else{ //    Regular moves
          uint32_t movers = get_red_movers();
+         uint32_t piece, dest;
 
          while(movers){
-            const uint32_t piece = movers & -movers;
-            uint32_t dest = (piece << 4) & empty;
+            piece = movers & -movers;
+            dest = (piece << 4) & empty;
             if (piece & king_bb){ //   king moves
                if (dest){
                   movegen_push((red_bb & ~piece) | dest, black_bb, 
@@ -675,24 +680,6 @@ int Board::gen_moves(Move * moves){
    return movecount;
 }
 
-int Board::get_tempo_score(uint32_t piece, int color){
-   if (color){
-      if (piece & ROW5) return 100;
-      if (piece & ROW4) return 200;
-      if (piece & ROW3) return 300;
-      if (piece & ROW2) return 400;
-      if (piece & ROW1) return 500;
-      return 0;
-   }
-   else{
-      if (piece & ROW4) return 100;
-      if (piece & ROW5) return 200;
-      if (piece & ROW6) return 300;
-      if (piece & ROW7) return 400;
-      if (piece & ROW8) return 500;
-      return 0;
-   }
-}
 void Board::movegen_push(uint32_t new_reds, uint32_t new_blacks, uint32_t new_kings, uint32_t to, uint32_t from, int color, bool is_promo, int pieces_taken){
    m[movecount].reds = new_reds;
    m[movecount].blacks = new_blacks;
@@ -711,7 +698,7 @@ void Board::movegen_push(uint32_t new_reds, uint32_t new_blacks, uint32_t new_ki
    movecount++;
 }
 
-bool Board::can_jump(uint32_t piece, int color){
+bool Board::can_jump(uint32_t piece, int color) const{
    if (color){
       return get_black_jumpers() & piece;
    }
@@ -739,40 +726,16 @@ void Board::set_random_pos(int moves_to_play){
 If the game is not over, 0 is returned.
 A red win returns 1, a black win returns 2.
 Use check_repetition for checking draws.*/
-int Board::check_win(){
+int Board::check_win() const{
    if (movecount == 0){
-      if (!red_bb){ //if red has no pieces, black wins
-         return 2;
-      }
-      if (!black_bb){ //if black has no pieces, red wins
-         return 1;
-      }
+      if (!red_bb) return 2; //if red has no pieces, black wins
+      if (!black_bb) return 1; //if black has no pieces, red wins
       /*If both sides still have pieces, but there are no legal moves,
       then the side whos turn it is to move loses */
-      if (turn){
-         return 1;
-      }
-      else{
-         return 2;
-      }
+      if (turn) return 1;
+      return 2;
    }
    return 0;//otherwise, the game is not over
-}
-
-/*
-Returns 1 if the game is a draw by repetition
-or 50 move rule (these are the only kinds of draws
-in checkers).
-*/
-int Board::check_repetition(){
-   if ((king_bb && (pos_history[hash_bb(red_bb, black_bb, king_bb, turn)] >= repetition_limit)) || (moves_since_take >= max_moves_without_take)){
-      return 1;
-   }
-   return 0;
-}
-
-void Board::clear_pos_history(){
-   pos_history.clear();
 }
 
 uint32_t Move::get_end_square(const uint32_t previous_pos) const{
@@ -821,8 +784,4 @@ void Move::get_move_info(uint32_t previous_pos) const{
 
    // std::array<int, 2> result = {binary_to_square(start), binary_to_square(end)};
    // std::cout << "\n";
-}
-
-bool Move::is_unreversible(){
-   return (!kings || !(kings & to) || is_promo || pieces_taken);
 }

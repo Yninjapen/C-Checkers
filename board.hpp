@@ -2,8 +2,8 @@
 //https://github.com/jonkr2/GuiNN_Checkers/blob/main/src
 
 /*TODO:
-  -cap the pos_history at 50, because that is the biggest
-    it can get without a draw occurring
+  -make things more efficient, declare variables outside of loops, define them in the loops
+  -work on inlining
   */
 #ifndef BOARD_H
 #define BOARD_H
@@ -55,14 +55,17 @@ struct Move{
     bool is_promo;
     int score = 0;
     
-    bool is_unreversible();
+    inline bool is_unreversible(){
+        return (!kings || !(kings & to) || is_promo || pieces_taken);
+    }
+
     void get_move_info(const uint32_t previous_pos) const;
     uint32_t get_end_square(const uint32_t previous_pos) const;
 
-    bool operator <(const Move& other) const{
+    bool inline operator <(const Move& other) const{
         return hash_bb(reds, blacks, kings, color) < hash_bb(other.reds, other.blacks, other.kings, other.color);
     }
-    bool operator ==(const Move& other) const{
+    bool inline operator ==(const Move& other) const{
         return (reds == other.reds) && (blacks == other.blacks) && (kings == other.kings);
     }
 };
@@ -81,13 +84,11 @@ class Board{
 
     const uint32_t red_promotion_mask = 0b11110000000000000000000000000000;
     const uint32_t black_promotion_mask = 0b00000000000000000000000000001111;
-    std::unordered_map<unsigned int, int> pos_history;
+    std::unordered_map<uint64_t, int> pos_history;
     const int repetition_limit = 3; //the number of times a position can be repeated before the game is considered a draw
     const int max_moves_without_take = 50;
 
     public:
-        
-
         uint32_t red_bb;
         uint32_t black_bb;
         uint32_t king_bb;
@@ -97,7 +98,9 @@ class Board{
         Board();
 
         void print_board();
-        uint32_t get_all_pieces();
+        inline uint32_t get_all_pieces() const{
+            return red_bb | black_bb;
+        }
 
         int movecount;
         Move * m;
@@ -105,23 +108,45 @@ class Board{
         void set_random_pos(int moves_to_play);
         void push_move(Move move);
         void undo(Move prev_pos, Move curr_pos);
-        uint32_t get_red_movers();
-        uint32_t get_black_movers();
-        uint32_t get_red_jumpers();
-        uint32_t get_black_jumpers();
-
         int gen_moves(Move * moves);
-        int check_win();
-        int check_repetition();
-        void clear_pos_history();
+        int check_win() const;
+
+        uint32_t get_red_movers() const;
+        uint32_t get_black_movers() const;
+        uint32_t get_red_jumpers() const;
+        uint32_t get_black_jumpers() const;
+
+        inline bool check_repetition() const{
+            return ((king_bb && (pos_history.at(hash_bb(red_bb, black_bb, king_bb, turn)) >= repetition_limit)) || (moves_since_take >= max_moves_without_take));
+        }
+        inline void clear_pos_history(){
+            pos_history.clear();
+        }
     
     private:
         int moves_since_take;
 
         bool add_red_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings, int pieces_taken);
         bool add_black_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings, int pieces_taken);
-        bool can_jump(uint32_t piece, int color);
+        bool can_jump(uint32_t piece, int color) const;
         void movegen_push(uint32_t new_reds, uint32_t new_blacks, uint32_t new_kings, uint32_t to, uint32_t from, int color, bool is_promo, int pieces_taken);
-        int get_tempo_score(uint32_t piece, int color);
+        
+        inline int get_tempo_score(uint32_t piece, int color) const{
+            if (color){
+                if (piece & ROW5) return 100;
+                if (piece & ROW4) return 200;
+                if (piece & ROW3) return 300;
+                if (piece & ROW2) return 400;
+                if (piece & ROW1) return 500;
+            }
+            else{
+                if (piece & ROW4) return 100;
+                if (piece & ROW5) return 200;
+                if (piece & ROW6) return 300;
+                if (piece & ROW7) return 400;
+                if (piece & ROW8) return 500;
+            }
+            return 0;
+        }
 };
 #endif
