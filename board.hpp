@@ -2,8 +2,8 @@
 //https://github.com/jonkr2/GuiNN_Checkers/blob/main/src
 
 /*TODO:
-  -make things more efficient, declare variables outside of loops, define them in the loops
-  -work on inlining
+  -remove all unnecessary internal variables so less things need to be copied when the board is copied
+    -especially the internal movelist, its not really even used
   */
 #ifndef BOARD_H
 #define BOARD_H
@@ -95,6 +95,10 @@ class Board{
         bool has_takes;
         int moves_played;
         int turn;
+        int movecount;
+        Move * m;
+        int moves_since_take;
+
         Board();
 
         void print_board();
@@ -102,8 +106,6 @@ class Board{
             return red_bb | black_bb;
         }
 
-        int movecount;
-        Move * m;
         Move get_random_move();
         void set_random_pos(int moves_to_play);
         void push_move(Move move);
@@ -124,8 +126,6 @@ class Board{
         }
     
     private:
-        int moves_since_take;
-
         bool add_red_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings, int pieces_taken);
         bool add_black_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings, int pieces_taken);
         bool can_jump(uint32_t piece, int color) const;
