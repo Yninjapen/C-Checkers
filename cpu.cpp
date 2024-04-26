@@ -95,7 +95,8 @@ int cpu::eval(Board board){
         temp_black &= temp_black-1;
     }
 
-    int result = red_score - black_score;
+    /* Calculate eval and dampen based on how close we are to a draw */
+    int result = (red_score - black_score) * (1 - board.moves_since_take/board.max_moves_without_take);
 
     /*Adjusts the score to be from the perspective of the player whose turn it is*/
     if (board.turn) return -result;
