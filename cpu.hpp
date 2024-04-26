@@ -20,11 +20,11 @@ class cpu{
     int current_depth;
     int opponent;
     int eval_multiplier;
-    double time_limit;
 
     public:
         int color;
         int nodes_traversed;
+        double time_limit;
         cpu(int cpu_color = 0, int cpu_depth = 10);
         Move max_depth_search(Board &board, bool feedback = true);
         Move time_search(Board &board, double t_limit, bool feedback = true);
