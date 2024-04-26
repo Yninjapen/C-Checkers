@@ -32,7 +32,6 @@ class cpu{
         
         void set_color(int new_color);
         void set_depth(int new_depth);
-        void manage_time();
 
     private:
         Move killers[1024][2];
@@ -60,15 +59,8 @@ class cpu{
         void set_move_scores(Move * m, int movecount, int ply);
         void order_moves(int movecount, Move * m, int current);
         void order_at_root(int movecount, Move * m, int current);
-};
-
-class time_manager{
-    cpu &cpu1;
-
-    public:
-        time_manager(cpu &cpu_) : cpu1(cpu_){}
-        void operator()() const{
-            cpu1.manage_time();
+        inline void check_time(){
+            if (!(nodes_traversed & 4095) && !search_cancelled) search_cancelled = get_time() - search_start > time_limit;
         }
 };
 #endif

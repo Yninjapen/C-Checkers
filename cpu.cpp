@@ -153,6 +153,7 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
     nodes_traversed++;
 
     /* Cancels the search if time has run out */
+    check_time();
     if (search_cancelled) return 0;
 
     int val = -MAX_VAL;
@@ -224,6 +225,7 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
    pieces are calculated all the way through.*/
 int cpu::quiesce(Board &board, int ply, int alpha, int beta){
     nodes_traversed++;
+    check_time();
     if (search_cancelled) return 0;
     if (board.check_repetition()) return draw_eval(board);
 
@@ -395,15 +397,6 @@ Move cpu::max_depth_search(Board &board, bool feedback){
     return move_to_make;
 }
 
-void cpu::manage_time(){
-    while(!search_cancelled){
-        if (get_time() - search_start > time_limit){
-            search_cancelled = true;
-            break;
-        }
-    }
-}
-
 //orders the moves based on the previous searches
 //meant to be used only with time_search
 void cpu::order_moves(int movecount, Move * m, int current){
@@ -455,8 +448,6 @@ Move cpu::time_search(Board &board, double t_limit, bool feedback){
     search_cancelled = false;
     time_limit = t_limit*1000;//converts seconds to milliseconds
     search_start = get_time();
-    time_manager manager(*this);
-    std::thread t1(manager);
 
     int val = search_iterate(board);
     
@@ -466,6 +457,5 @@ Move cpu::time_search(Board &board, double t_limit, bool feedback){
         std::cout << "Nodes Traversed: " << nodes_traversed << "\n";
     }
 
-    t1.join();
     return move_to_make;
 }   
