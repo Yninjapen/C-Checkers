@@ -726,7 +726,6 @@ bool Board::can_jump(uint32_t piece, int color) const{
 //returns a random legal move
 //NOTE: I'm not entirely sure if this works its a little iffy for some reason
 Move Board::get_random_move(){
-   srand(time(NULL));
    Move arr[64];
    gen_moves(arr);
    int index = rand() % movecount;

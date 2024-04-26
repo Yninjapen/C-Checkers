@@ -86,7 +86,6 @@ class Board{
     const uint32_t black_promotion_mask = 0b00000000000000000000000000001111;
     std::unordered_map<uint64_t, int> pos_history;
     const int repetition_limit = 3; //the number of times a position can be repeated before the game is considered a draw
-    const int max_moves_without_take = 50;
 
     public:
         uint32_t red_bb;
@@ -98,6 +97,7 @@ class Board{
         int movecount;
         Move * m;
         int moves_since_take;
+        const int max_moves_without_take = 50;
 
         Board();
 
