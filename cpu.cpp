@@ -389,6 +389,7 @@ Move cpu::max_depth_search(Board &board, bool feedback){
     Move movelist[64];
     board.gen_moves(movelist);
     move_to_make = movelist[0];
+    time_limit = INFINITY;
 
     int val = search_root(board, max_depth, -MAX_VAL, MAX_VAL);
 
