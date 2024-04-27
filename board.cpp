@@ -24,7 +24,7 @@ Board::Board(){
 
    moves_played = 0;
    movecount = 0;
-   moves_since_take = 0;
+   reversible_moves = 0;
 }
 
 //prints a representation of the board to the console
@@ -86,7 +86,7 @@ void Board::print_board(){
          std::cout << "Black wins\n";
       }
       else{
-         if (moves_since_take >= max_moves_without_take){
+         if (reversible_moves >= max_moves_without_take){
             std::cout << "Draw by 50 move rule\n";
          }
          else{
@@ -100,31 +100,24 @@ void Board::print_board(){
 void Board::push_move(Move move){
    moves_played++;
 
+   reversible_moves = (reversible_moves + 1) * ((move.from & king_bb) && !move.pieces_taken);
+
    red_bb = move.reds;
    black_bb = move.blacks;
    king_bb = move.kings;
 
    turn = !turn;
-   
+
    if (king_bb){ //since checkers positions can only be repeated if there are kings, if there are no kings,
-      pos_history[hash_bb(red_bb, black_bb, king_bb, turn)] += 1;//        we dont even need to track the position
+      rep_stack[reversible_moves] = hash_bb(red_bb, black_bb, king_bb, turn);
    }
 
-   moves_since_take = (moves_since_take + 1) * !(move.pieces_taken || move.is_promo);
 }
 
 void Board::undo(Move prev_pos, Move curr_pos){
    moves_played--;
 
-   if (king_bb){
-      unsigned int hash = hash_bb(red_bb, black_bb, king_bb, turn);
-      if (pos_history[hash] == 1){
-         pos_history.erase(hash);
-      }
-      else if (pos_history[hash] > 1) {
-         pos_history[hash] -= 1;
-      }
-   }
+   if (reversible_moves) reversible_moves--;
 
    turn = curr_pos.color;
    has_takes = curr_pos.pieces_taken;
@@ -753,6 +746,18 @@ int Board::check_win() const{
       return 2;
    }
    return 0;//otherwise, the game is not over
+}
+
+bool Board::check_repetition() const{
+   if (!king_bb) return false;
+   int i = 0;
+   uint64_t hash = hash_bb(red_bb, black_bb, king_bb, turn);
+   if (reversible_moves & 1) i++;
+
+   for(; i < reversible_moves-1; i+=2){
+      if (rep_stack[i] == hash) return true;
+   }
+   return false;
 }
 
 uint32_t Move::get_end_square(const uint32_t previous_pos) const{

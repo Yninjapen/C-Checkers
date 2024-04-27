@@ -81,13 +81,12 @@ struct Move{
  01    02    03    04
 */
 class Board{
-
-    const uint32_t red_promotion_mask = 0b11110000000000000000000000000000;
-    const uint32_t black_promotion_mask = 0b00000000000000000000000000001111;
-    std::unordered_map<uint64_t, int> pos_history;
-    const int repetition_limit = 3; //the number of times a position can be repeated before the game is considered a draw
-
     public:
+        static const uint32_t red_promotion_mask = 0b11110000000000000000000000000000;
+        static const uint32_t black_promotion_mask = 0b00000000000000000000000000001111;
+        static const int repetition_limit = 3; //the number of times a position can be repeated before the game is considered a draw
+        static const int max_moves_without_take = 50;
+
         uint32_t red_bb;
         uint32_t black_bb;
         uint32_t king_bb;
@@ -95,9 +94,10 @@ class Board{
         int moves_played;
         int turn;
         int movecount;
+
         Move * m;
-        int moves_since_take;
-        const int max_moves_without_take = 50;
+        int reversible_moves;
+        uint64_t rep_stack[max_moves_without_take];
 
         Board();
 
@@ -118,11 +118,10 @@ class Board{
         uint32_t get_red_jumpers() const;
         uint32_t get_black_jumpers() const;
 
-        inline bool check_repetition() const{
-            return ((king_bb && (pos_history.at(hash_bb(red_bb, black_bb, king_bb, turn)) >= repetition_limit)) || (moves_since_take >= max_moves_without_take));
-        }
+        bool check_repetition() const;
+
         inline void clear_pos_history(){
-            pos_history.clear();
+            reversible_moves = 0;
         }
     
     private:
