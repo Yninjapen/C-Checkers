@@ -750,6 +750,7 @@ int Board::check_win() const{
 
 bool Board::check_repetition() const{
    if (!king_bb) return false;
+   if (reversible_moves >= max_moves_without_take) return true;
    int i = 0;
    uint64_t hash = hash_bb(red_bb, black_bb, king_bb, turn);
    if (reversible_moves & 1) i++;
