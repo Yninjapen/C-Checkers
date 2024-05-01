@@ -3,6 +3,7 @@
 #include <random>
 #include <time.h>
 #include "board.hpp"
+#include "transposition.hpp"
 
 /* Bitboard configuration
     29    30    31    32
@@ -96,22 +97,45 @@ void Board::print_board(){
    }
 }
 
+uint64_t Board::calc_hash_key(){
+   uint64_t checkSum = 0;
+   for (int i = 0; i < 32; i++){
+      if (S[i] & black_bb) checkSum ^= hash.HASH_FUNCTION[i][1 + (S[i] & king_bb) ? 2:0];
+      else if (S[i] & red_bb) checkSum ^= hash.HASH_FUNCTION[i][(S[i] & king_bb) ? 2:0];
+   }
+   if(turn){
+      checkSum ^= hash.HASH_COLOR;
+   }
+   return checkSum;
+}
+
 //takes in a Move object, and changes the board state accordingly
 void Board::push_move(Move move){
    moves_played++;
 
    reversible_moves = (reversible_moves + 1) * ((move.from & king_bb) && !move.pieces_taken);
 
+   uint32_t taken = (turn) ? (red_bb ^ move.reds) : (black_bb ^ move.blacks);
+   uint8_t piecetype = move.color + ((move.to & king_bb) ? 2:0);
+   turn = !turn;
+
+   hashKey ^= hash.HASH_COLOR;
+   hashKey ^= hash.HASH_FUNCTION[binary_to_square(move.from)][piecetype] ^ hash.HASH_FUNCTION[binary_to_square(move.to)][piecetype];
+
+   while(taken){
+      uint32_t piece = taken & -taken;
+      piecetype = turn + ((piece & king_bb) ? 2:0);
+      hashKey ^= hash.HASH_FUNCTION[binary_to_square(piece)][piecetype];
+      taken &= taken - 1;
+   }
+
    red_bb = move.reds;
    black_bb = move.blacks;
    king_bb = move.kings;
 
-   turn = !turn;
-
    if (king_bb){ //since checkers positions can only be repeated if there are kings, if there are no kings,
-      rep_stack[reversible_moves] = hash_bb(red_bb, black_bb, king_bb, turn);
+      rep_stack[reversible_moves] = hashKey;
    }
-
 }
 
 void Board::undo(Move prev_pos, Move curr_pos){
@@ -125,6 +149,7 @@ void Board::undo(Move prev_pos, Move curr_pos){
    red_bb = prev_pos.reds;
    black_bb = prev_pos.blacks;
    king_bb = prev_pos.kings;
+   hashKey = calc_hash_key();
 }
 
 uint32_t Board::get_red_movers() const{
@@ -399,7 +424,7 @@ bool Board::add_black_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_bla
    return result;
 }
 //generates all legal moves
-int Board::gen_moves(Move * moves){
+int Board::gen_moves(Move * moves, uint8_t tt_move){
    m = moves;
    movecount = 0;
    has_takes = false;
@@ -670,6 +695,9 @@ int Board::gen_moves(Move * moves){
          }
       }
    }
+
+   if ((tt_move != -1) && (tt_move < movecount)) moves[tt_move].score = HASH_SORT;
+
    return movecount;
 }
 
@@ -720,7 +748,7 @@ bool Board::can_jump(uint32_t piece, int color) const{
 //NOTE: I'm not entirely sure if this works its a little iffy for some reason
 Move Board::get_random_move(){
    Move arr[64];
-   gen_moves(arr);
+   gen_moves(arr, (char)-1);
    int index = rand() % movecount;
    return arr[index];
 }
@@ -752,11 +780,10 @@ bool Board::check_repetition() const{
    if (!king_bb) return false;
    if (reversible_moves >= max_moves_without_take) return true;
    int i = 0;
-   uint64_t hash = hash_bb(red_bb, black_bb, king_bb, turn);
    if (reversible_moves & 1) i++;
 
    for(; i < reversible_moves-1; i+=2){
-      if (rep_stack[i] == hash) return true;
+      if (rep_stack[i] == hashKey) return true;
    }
    return false;
 }
@@ -789,10 +816,10 @@ void Move::get_move_info(uint32_t previous_pos) const{
    }
 
    if (middle){
-      std::cout << binary_to_square(start) << "-" << binary_to_square(middle) << "-" << binary_to_square(end);
+      std::cout << binary_to_square(start) + 1 << "-" << binary_to_square(middle) + 1 << "-" << binary_to_square(end) + 1;
    }
    else{
-      std::cout << binary_to_square(start) << "-" << binary_to_square(end);
+      std::cout << binary_to_square(start) + 1 << "-" << binary_to_square(end) + 1;
    }
    // std::cout << "Start: expected square is " << binary_to_square(start) << ", binary is: ";
    // print_binary(start);

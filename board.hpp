@@ -8,9 +8,11 @@
 #ifndef BOARD_H
 #define BOARD_H
 
-#define TAKE_SORT 1000
-#define PROMO_SORT 1100
+#define TAKE_SORT 10000
+#define PROMO_SORT 15000
 #define KILLER_SORT 100000
+#define HASH_SORT 200000
+#define INVALID 32767
 
 #include <vector>
 #include <math.h>
@@ -18,6 +20,7 @@
 #include <unordered_map>
 #include <cassert>
 #include "misc.hpp"
+#include "transposition.hpp"
 
 const uint32_t S[34] = {
             (1 << 0), (1 << 1), (1 << 2), (1 << 3), (1 << 4), (1 << 5), (1 << 6), (1 << 7), (1 << 8), (1 << 9), (1 << 10), (1 << 11), (1 << 12), (1 << 13), (1 << 14), (1 << 15),
@@ -94,6 +97,7 @@ class Board{
         int moves_played;
         int turn;
         int movecount;
+        uint64_t hashKey;
 
         Move * m;
         int reversible_moves;
@@ -110,7 +114,7 @@ class Board{
         void set_random_pos(int moves_to_play);
         void push_move(Move move);
         void undo(Move prev_pos, Move curr_pos);
-        int gen_moves(Move * moves);
+        int gen_moves(Move * moves, uint8_t tt_move);
         int check_win() const;
 
         uint32_t get_red_movers() const;
@@ -130,5 +134,6 @@ class Board{
         bool can_jump(uint32_t piece, int color) const;
         void movegen_push(uint32_t new_reds, uint32_t new_blacks, uint32_t new_kings, uint32_t to, uint32_t from, int color, bool is_promo, int pieces_taken);
         int get_tempo_score(uint32_t piece, int color) const;
+        uint64_t calc_hash_key();
 };
 #endif
