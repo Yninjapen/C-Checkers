@@ -74,6 +74,12 @@ int main(){
                     undone = true;
                 }
             }
+            // if (is_depth_search){
+            //     m = cpu2.max_depth_search(board, true);
+            // }
+            // else{
+            //     m = cpu2.time_search(board, t);
+            // }
         }
         else{
             if (is_depth_search){
@@ -83,7 +89,7 @@ int main(){
                 m = cpu1.time_search(board, t);
             }
         }
-        
+
         if (!undone){
             if (m.is_unreversible()){
                 board.clear_pos_history();
