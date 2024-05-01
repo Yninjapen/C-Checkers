@@ -20,7 +20,6 @@
 #include <unordered_map>
 #include <cassert>
 #include "misc.hpp"
-#include "transposition.hpp"
 
 const uint32_t S[34] = {
             (1 << 0), (1 << 1), (1 << 2), (1 << 3), (1 << 4), (1 << 5), (1 << 6), (1 << 7), (1 << 8), (1 << 9), (1 << 10), (1 << 11), (1 << 12), (1 << 13), (1 << 14), (1 << 15),
@@ -52,7 +51,7 @@ struct Move{
     uint32_t kings;
     uint32_t to;
     uint32_t from;
-
+    char id;
     int color;
     int pieces_taken;
     bool is_promo;
@@ -105,6 +104,7 @@ class Board{
 
         Board();
 
+        void reset();
         void print_board();
         inline uint32_t get_all_pieces() const{
             return red_bb | black_bb;
@@ -127,12 +127,13 @@ class Board{
         inline void clear_pos_history(){
             reversible_moves = 0;
         }
-    
+
     private:
+        uint32_t move_start;
         bool add_red_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings, int pieces_taken);
         bool add_black_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings, int pieces_taken);
         bool can_jump(uint32_t piece, int color) const;
-        void movegen_push(uint32_t new_reds, uint32_t new_blacks, uint32_t new_kings, uint32_t to, uint32_t from, int color, bool is_promo, int pieces_taken);
+        void movegen_push(uint32_t new_reds, uint32_t new_blacks, uint32_t new_kings, uint32_t to, int color, bool is_promo, int pieces_taken);
         int get_tempo_score(uint32_t piece, int color) const;
         uint64_t calc_hash_key();
 };

@@ -26,6 +26,7 @@ Board::Board(){
    moves_played = 0;
    movecount = 0;
    reversible_moves = 0;
+   hashKey = calc_hash_key();
 }
 
 //prints a representation of the board to the console
@@ -97,11 +98,27 @@ void Board::print_board(){
    }
 }
 
+void Board::reset(){
+   red_bb = 0b00000000000000000000111111111111;
+   black_bb = 0b11111111111100000000000000000000;
+   king_bb = 0b00000000000000000000000000000000;
+   turn = 0;
+   has_takes = false;
+
+   moves_played = 0;
+   movecount = 0;
+   reversible_moves = 0;
+   hashKey = calc_hash_key();
+}
+
 uint64_t Board::calc_hash_key(){
    uint64_t checkSum = 0;
    for (int i = 0; i < 32; i++){
-      if (S[i] & black_bb) checkSum ^= hash.HASH_FUNCTION[i][1 + (S[i] & king_bb) ? 2:0];
-      else if (S[i] & red_bb) checkSum ^= hash.HASH_FUNCTION[i][(S[i] & king_bb) ? 2:0];
+      if (S[i] & (black_bb | red_bb)){
+         int piece = (S[i] & king_bb) ? 1:0;
+         int color = (S[i] & black_bb) ? 1:0;
+         checkSum ^= hash.HASH_FUNCTION[piece][color][i];
+      }
    }
    if(turn){
       checkSum ^= hash.HASH_COLOR;
@@ -115,19 +132,19 @@ void Board::push_move(Move move){
 
    reversible_moves = (reversible_moves + 1) * ((move.from & king_bb) && !move.pieces_taken);
 
-   uint32_t taken = (turn) ? (red_bb ^ move.reds) : (black_bb ^ move.blacks);
-   uint8_t piecetype = move.color + ((move.to & king_bb) ? 2:0);
+   uint32_t taken = (turn) ? (red_bb & ~move.reds) : (black_bb & ~move.blacks);
+   uint8_t piecetype = (move.from & king_bb) ? 1:0;
+
    turn = !turn;
 
    hashKey ^= hash.HASH_COLOR;
-   hashKey ^= hash.HASH_FUNCTION[binary_to_square(move.from)][piecetype] ^ hash.HASH_FUNCTION[binary_to_square(move.to)][piecetype];
-
+   hashKey ^= hash.HASH_FUNCTION[piecetype][move.color][binary_to_square(move.from)];
    while(taken){
       uint32_t piece = taken & -taken;
-      piecetype = turn + ((piece & king_bb) ? 2:0);
-      hashKey ^= hash.HASH_FUNCTION[binary_to_square(piece)][piecetype];
+      hashKey ^= hash.HASH_FUNCTION[(piece & king_bb) ? 1:0][turn][binary_to_square(piece)];
       taken &= taken - 1;
    }
+   hashKey ^= hash.HASH_FUNCTION[(move.to & move.kings) ? 1:0][move.color][binary_to_square(move.to)];
 
    red_bb = move.reds;
    black_bb = move.blacks;
@@ -255,7 +272,7 @@ bool Board::add_red_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black
          new_blacks = temp_black & ~taken;
          new_kings = (adjusted_kings | dest) & ~taken;
          if (!add_red_jump(dest, new_reds, new_blacks, new_kings, new_pieces_taken)){
-            movegen_push(new_reds, new_blacks, new_kings, dest, jumper, 0, false, new_pieces_taken);
+            movegen_push(new_reds, new_blacks, new_kings, dest, 0, false, new_pieces_taken);
          }
          result = true;
       }
@@ -266,7 +283,7 @@ bool Board::add_red_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black
          new_blacks = temp_black & ~taken;
          new_kings = (adjusted_kings | dest) & ~taken;
          if (!add_red_jump(dest, new_reds, new_blacks, new_kings, new_pieces_taken)){
-            movegen_push(new_reds, new_blacks, new_kings, dest, jumper, 0, false, new_pieces_taken);
+            movegen_push(new_reds, new_blacks, new_kings, dest, 0, false, new_pieces_taken);
          }
          result = true;
       }
@@ -277,7 +294,7 @@ bool Board::add_red_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black
          new_blacks = temp_black & ~taken;
          new_kings = (adjusted_kings | dest) & ~taken;
          if (!add_red_jump(dest, new_reds, new_blacks, new_kings, new_pieces_taken)){
-            movegen_push(new_reds, new_blacks, new_kings, dest, jumper, 0, false, new_pieces_taken);
+            movegen_push(new_reds, new_blacks, new_kings, dest, 0, false, new_pieces_taken);
          }
          result = true;
       }
@@ -288,7 +305,7 @@ bool Board::add_red_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black
          new_blacks = temp_black & ~taken;
          new_kings = (adjusted_kings | dest) & ~taken;
          if (!add_red_jump(dest, new_reds, new_blacks, new_kings, new_pieces_taken)){
-            movegen_push(new_reds, new_blacks, new_kings, dest, jumper, 0, false, new_pieces_taken);
+            movegen_push(new_reds, new_blacks, new_kings, dest, 0, false, new_pieces_taken);
          }
          result = true;
       }
@@ -303,7 +320,7 @@ bool Board::add_red_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black
          uint32_t is_promo = (dest & red_promotion_mask);
          new_kings = (is_promo | temp_kings) & ~taken;
          if (is_promo || !add_red_jump(dest, new_reds, new_blacks, new_kings, new_pieces_taken)){
-            movegen_push(new_reds, new_blacks, new_kings, dest, jumper, 0, is_promo, new_pieces_taken);
+            movegen_push(new_reds, new_blacks, new_kings, dest, 0, is_promo, new_pieces_taken);
          }
          result = true;
       }
@@ -315,7 +332,7 @@ bool Board::add_red_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black
          uint32_t is_promo = (dest & red_promotion_mask);
          new_kings = (is_promo | temp_kings) & ~taken;
          if (is_promo || !add_red_jump(dest, new_reds, new_blacks, new_kings, new_pieces_taken)){
-            movegen_push(new_reds, new_blacks, new_kings, dest, jumper, 0, is_promo, new_pieces_taken);
+            movegen_push(new_reds, new_blacks, new_kings, dest, 0, is_promo, new_pieces_taken);
          }
          result = true;
       }
@@ -355,7 +372,7 @@ bool Board::add_black_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_bla
          new_blacks = adjusted_black | dest;
          new_kings = (adjusted_kings | dest) & ~taken;
          if (!add_black_jump(dest, new_reds, new_blacks, new_kings, new_pieces_taken)){
-            movegen_push(new_reds, new_blacks, new_kings, dest, jumper, 1, false, new_pieces_taken);
+            movegen_push(new_reds, new_blacks, new_kings, dest, 1, false, new_pieces_taken);
          }
          result = true;
       }
@@ -366,7 +383,7 @@ bool Board::add_black_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_bla
          new_blacks = adjusted_black | dest;
          new_kings = (adjusted_kings | dest) & ~taken;
          if (!add_black_jump(dest, new_reds, new_blacks, new_kings, new_pieces_taken)){
-            movegen_push(new_reds, new_blacks, new_kings, dest, jumper, 1, false, new_pieces_taken);
+            movegen_push(new_reds, new_blacks, new_kings, dest, 1, false, new_pieces_taken);
          }
          result = true;
       }
@@ -378,7 +395,7 @@ bool Board::add_black_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_bla
          new_blacks = adjusted_black | dest;
          new_kings = (adjusted_kings | dest) & ~taken;
          if (!add_black_jump(dest, new_reds, new_blacks, new_kings, new_pieces_taken)){
-            movegen_push(new_reds, new_blacks, new_kings, dest, jumper, 1, false, new_pieces_taken);
+            movegen_push(new_reds, new_blacks, new_kings, dest, 1, false, new_pieces_taken);
          }
          result = true;
       }
@@ -389,7 +406,7 @@ bool Board::add_black_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_bla
          new_blacks = adjusted_black | dest;
          new_kings = (adjusted_kings | dest) & ~taken;
          if (!add_black_jump(dest, new_reds, new_blacks, new_kings, new_pieces_taken)){
-            movegen_push(new_reds, new_blacks, new_kings, dest, jumper, 1, false, new_pieces_taken);
+            movegen_push(new_reds, new_blacks, new_kings, dest, 1, false, new_pieces_taken);
          }
          result = true;
       }
@@ -403,7 +420,7 @@ bool Board::add_black_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_bla
          uint32_t is_promo = dest & black_promotion_mask;
          new_kings = (is_promo | temp_kings) & ~taken;
          if (is_promo || !add_black_jump(dest, new_reds, new_blacks, new_kings, new_pieces_taken)){
-            movegen_push(new_reds, new_blacks, new_kings, dest, jumper, 1, is_promo, new_pieces_taken);
+            movegen_push(new_reds, new_blacks, new_kings, dest, 1, is_promo, new_pieces_taken);
          }
          result = true;
       }
@@ -416,7 +433,7 @@ bool Board::add_black_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_bla
          uint32_t is_promo = dest & black_promotion_mask;
          new_kings = (is_promo | temp_kings) & ~taken;
          if (is_promo || !add_black_jump(dest, new_reds, new_blacks, new_kings, new_pieces_taken)){
-            movegen_push(new_reds, new_blacks, new_kings, dest, jumper, 1, is_promo, new_pieces_taken);
+            movegen_push(new_reds, new_blacks, new_kings, dest, 1, is_promo, new_pieces_taken);
          }
          result = true;
       }
@@ -446,6 +463,7 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
 
          while (jumpers){
             piece = jumpers & -jumpers;
+            move_start = piece;
             adjusted_black = (black_bb & ~piece);
 
             taken = (piece >> 4) & red_bb;
@@ -457,7 +475,7 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
                   new_blacks = adjusted_black | dest;
                   new_kings = (adjusted_kings | dest) & ~taken;
                   if (!add_black_jump(dest, new_reds, new_blacks, new_kings, 1)){
-                     movegen_push(new_reds, new_blacks, new_kings, dest, piece, 1, false, 1);
+                     movegen_push(new_reds, new_blacks, new_kings, dest, 1, false, 1);
                   }
                }
                taken = (((piece & MASK_R3) >> 3) | ((piece & MASK_R5) >> 5)) & red_bb;
@@ -467,7 +485,7 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
                   new_blacks = adjusted_black | dest;
                   new_kings = (adjusted_kings | dest) & ~taken;
                   if (!add_black_jump(dest, new_reds, new_blacks, new_kings, 1)){
-                     movegen_push(new_reds, new_blacks, new_kings, dest, piece, 1, false, 1);
+                     movegen_push(new_reds, new_blacks, new_kings, dest, 1, false, 1);
                   }
                }
 
@@ -478,7 +496,7 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
                   new_blacks = adjusted_black | dest;
                   new_kings = (adjusted_kings | dest) & ~taken;
                   if (!add_black_jump(dest, new_reds, new_blacks, new_kings, 1)){
-                     movegen_push(new_reds, new_blacks, new_kings, dest, piece, 1, false, 1);
+                     movegen_push(new_reds, new_blacks, new_kings, dest, 1, false, 1);
                   }
                }
                taken = (((piece & MASK_L3) << 3) | ((piece & MASK_L5) << 5)) & red_bb;
@@ -488,7 +506,7 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
                   new_blacks = adjusted_black | dest;
                   new_kings = (adjusted_kings | dest) & ~taken;
                   if (!add_black_jump(dest, new_reds, new_blacks, new_kings, 1)){
-                     movegen_push(new_reds, new_blacks, new_kings, dest, piece, 1, false, 1);
+                     movegen_push(new_reds, new_blacks, new_kings, dest, 1, false, 1);
                   }
                }
             }
@@ -499,7 +517,7 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
                   uint32_t is_promo = dest & black_promotion_mask;
                   new_kings = (is_promo | king_bb) & ~taken;
                   if (is_promo || !add_black_jump(dest, new_reds, new_blacks, new_kings, 1)){
-                     movegen_push(new_reds, new_blacks, new_kings, dest, piece, 1, is_promo, 1);
+                     movegen_push(new_reds, new_blacks, new_kings, dest, 1, is_promo, 1);
                   }
                }
    
@@ -511,7 +529,7 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
                   uint32_t is_promo = dest & black_promotion_mask;
                   new_kings = (is_promo | king_bb) & ~taken;
                   if (is_promo || !add_black_jump(dest, new_reds, new_blacks, new_kings, 1)){
-                     movegen_push(new_reds, new_blacks, new_kings, dest, piece, 1, is_promo, 1);
+                     movegen_push(new_reds, new_blacks, new_kings, dest, 1, is_promo, 1);
                   }
                }
             }
@@ -524,38 +542,39 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
 
          while (movers){
             piece = movers & -movers;
+            move_start = piece;
             dest = (piece >> 4) & empty;
 
             if (piece & king_bb){ // king moves
                if (dest){
                   movegen_push(red_bb, (black_bb & ~piece) | dest, 
-                                        (king_bb & ~piece) | dest, dest, piece, 1, false, 0);
+                                        (king_bb & ~piece) | dest, dest, 1, false, 0);
                }
                dest = (((piece & MASK_R3) >> 3) | ((piece & MASK_R5) >> 5)) & empty;
                if (dest){
                   movegen_push(red_bb, (black_bb & ~piece) | dest, 
-                                          (king_bb & ~piece) | dest, dest, piece, 1, false, 0);
+                                          (king_bb & ~piece) | dest, dest, 1, false, 0);
                }
                dest = (piece << 4) & empty;
                if (dest){
                   movegen_push(red_bb, (black_bb & ~piece) | dest, 
-                                          (king_bb & ~piece) | dest, dest, piece, 1, false, 0);
+                                          (king_bb & ~piece) | dest, dest, 1, false, 0);
                }
                dest = (((piece & MASK_L3) << 3) | ((piece & MASK_L5) << 5)) & empty;
                if (dest){
                   movegen_push(red_bb, (black_bb & ~piece) | dest, 
-                                          (king_bb & ~piece) | dest, dest, piece, 1, false, 0);
+                                          (king_bb & ~piece) | dest, dest, 1, false, 0);
                }
             }
             else{// piece moves
                if (dest){
                   movegen_push(red_bb, (black_bb & ~piece) | dest, 
-                                             (dest & black_promotion_mask) | king_bb, dest, piece, 1, (dest & black_promotion_mask), 0);
+                                             (dest & black_promotion_mask) | king_bb, dest, 1, (dest & black_promotion_mask), 0);
                }
                dest = (((piece & MASK_R3) >> 3) | ((piece & MASK_R5) >> 5)) & empty;
                if (dest){
                   movegen_push(red_bb, (black_bb & ~piece) | dest, 
-                                             (dest & black_promotion_mask) | king_bb, dest, piece, 1, (dest & black_promotion_mask), 0);
+                                             (dest & black_promotion_mask) | king_bb, dest, 1, (dest & black_promotion_mask), 0);
                }
             }
             movers &= movers-1;
@@ -576,6 +595,7 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
 
          while (jumpers){ // takes
             piece = jumpers & -jumpers;
+            move_start = piece;
             adjusted_red = (red_bb & ~piece);
 
             taken = (piece << 4) & black_bb;
@@ -589,7 +609,7 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
                   new_blacks = black_bb & ~taken;
                   new_kings = (adjusted_kings | dest) & ~taken;
                   if (!add_red_jump(dest, new_reds, new_blacks, new_kings, 1)){
-                     movegen_push(new_reds, new_blacks, new_kings, dest, piece, 0, false, 1);
+                     movegen_push(new_reds, new_blacks, new_kings, dest, 0, false, 1);
                   }
                }
 
@@ -600,7 +620,7 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
                   new_blacks = black_bb & ~taken;
                   new_kings = (adjusted_kings | dest) & ~taken;
                   if (!add_red_jump(dest, new_reds, new_blacks, new_kings, 1)){
-                     movegen_push(new_reds, new_blacks, new_kings, dest, piece, 0, false, 1);
+                     movegen_push(new_reds, new_blacks, new_kings, dest, 0, false, 1);
                   }
                }
 
@@ -611,7 +631,7 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
                   new_blacks = black_bb & ~taken;
                   new_kings = (adjusted_kings | dest) & ~taken;
                   if (!add_red_jump(dest, new_reds, new_blacks, new_kings, 1)){
-                     movegen_push(new_reds, new_blacks, new_kings, dest, piece, 0, false, 1);
+                     movegen_push(new_reds, new_blacks, new_kings, dest, 0, false, 1);
                   }
                }
 
@@ -622,7 +642,7 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
                   new_blacks = black_bb & ~taken;
                   new_kings = (adjusted_kings | dest) & ~taken;
                   if (!add_red_jump(dest, new_reds, new_blacks, new_kings, 1)){
-                     movegen_push(new_reds, new_blacks, new_kings, dest, piece, 0, false, 1);
+                     movegen_push(new_reds, new_blacks, new_kings, dest, 0, false, 1);
                   }
                }
             }
@@ -633,7 +653,7 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
                   uint32_t is_promo = (dest & red_promotion_mask);
                   new_kings = (is_promo | king_bb) & ~taken;
                   if (is_promo || !add_red_jump(dest, new_reds, new_blacks, new_kings, 1)){
-                     movegen_push(new_reds, new_blacks, new_kings, dest, piece, 0, is_promo, 1);
+                     movegen_push(new_reds, new_blacks, new_kings, dest, 0, is_promo, 1);
                   }
                }
 
@@ -645,7 +665,7 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
                   uint32_t is_promo = (dest & red_promotion_mask);
                   new_kings = (is_promo | king_bb) & ~taken;
                   if (is_promo || !add_red_jump(dest, new_reds, new_blacks, new_kings, 1)){
-                     movegen_push(new_reds, new_blacks, new_kings, dest, piece, 0, is_promo, 1);
+                     movegen_push(new_reds, new_blacks, new_kings, dest, 0, is_promo, 1);
                   }
                }
             }
@@ -658,37 +678,38 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
 
          while(movers){
             piece = movers & -movers;
+            move_start = piece;
             dest = (piece << 4) & empty;
             if (piece & king_bb){ //   king moves
                if (dest){
                   movegen_push((red_bb & ~piece) | dest, black_bb, 
-                                             (king_bb & ~piece) | dest, dest, piece, 0, false, 0);
+                                             (king_bb & ~piece) | dest, dest, 0, false, 0);
                }
                dest = (((piece & MASK_L3) << 3) | ((piece & MASK_L5) << 5)) & empty;
                if (dest){
                   movegen_push((red_bb & ~piece) | dest, black_bb, 
-                                             (king_bb & ~piece) | dest, dest, piece, 0, false, 0);
+                                             (king_bb & ~piece) | dest, dest, 0, false, 0);
                }
                dest = (piece >> 4) & empty;
                if (dest){
                   movegen_push((red_bb & ~piece) | dest, black_bb, 
-                                          (king_bb & ~piece) | dest, dest, piece, 0, false, 0);
+                                          (king_bb & ~piece) | dest, dest, 0, false, 0);
                }
                dest = (((piece & MASK_R3) >> 3) | ((piece & MASK_R5) >> 5)) & empty;
                if (dest){
                   movegen_push((red_bb & ~piece) | dest, black_bb, 
-                                          (king_bb & ~piece) | dest, dest, piece, 0, false, 0);
+                                          (king_bb & ~piece) | dest, dest, 0, false, 0);
                }
             }
             else{ // regular moves
                if (dest){
                movegen_push((red_bb & ~piece) | dest, black_bb, 
-                                          (dest & red_promotion_mask) | king_bb, dest, piece, 0, (dest & red_promotion_mask), 0);
+                                          (dest & red_promotion_mask) | king_bb, dest, 0, (dest & red_promotion_mask), 0);
                }
                dest = (((piece & MASK_L3) << 3) | ((piece & MASK_L5) << 5)) & empty;
                if (dest){
                   movegen_push((red_bb & ~piece) | dest, black_bb, 
-                                             (dest & red_promotion_mask) | king_bb, dest, piece, 0, (dest & red_promotion_mask), 0);
+                                             (dest & red_promotion_mask) | king_bb, dest, 0, (dest & red_promotion_mask), 0);
                }
             }
             movers &= movers-1;
@@ -719,16 +740,17 @@ int Board::get_tempo_score(uint32_t piece, int color) const{
    return 0;
 }
 
-void Board::movegen_push(uint32_t new_reds, uint32_t new_blacks, uint32_t new_kings, uint32_t to, uint32_t from, int color, bool is_promo, int pieces_taken){
+void Board::movegen_push(uint32_t new_reds, uint32_t new_blacks, uint32_t new_kings, uint32_t to, int color, bool is_promo, int pieces_taken){
    m[movecount].reds = new_reds;
    m[movecount].blacks = new_blacks;
    m[movecount].kings = new_kings;
    m[movecount].to = to;
-   m[movecount].from = from;
+   m[movecount].from = move_start;
    m[movecount].color = color;
    m[movecount].is_promo = is_promo;
    m[movecount].pieces_taken = pieces_taken;
    m[movecount].score = 0;
+   m[movecount].id = movecount;
 
    if (is_promo) m[movecount].score += PROMO_SORT;
    if (!(to & new_kings)) m[movecount].score += get_tempo_score(to, color);

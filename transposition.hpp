@@ -2,12 +2,13 @@
 #define TRANSPOSITION_H
 
 #include <cstdint>
+#include "board.hpp"
 
 uint64_t rand64();
 void set_hash_function();
 
 struct hash_func{
-    uint64_t HASH_FUNCTION[32][4];
+    uint64_t HASH_FUNCTION[2][2][32];
     uint64_t HASH_COLOR;
 } extern hash;
 
@@ -28,10 +29,12 @@ struct tt_entry{
 struct tt_table{
     tt_entry * tt;
     int tt_size;
+    int num_entries = 0;
+    int fails = 0;
 
     int set_size(int size);
     int probe(uint64_t boardhash, uint8_t depth, int alpha, int beta, char * best);
-    void save(uint64_t boardhash, uint8_t depth, int val, char flags,uint8_t best);
+    void save(uint64_t boardhash, uint8_t depth, int val, char flags, uint8_t best);
 };
 
 #endif

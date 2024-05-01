@@ -1,5 +1,4 @@
 #include "transposition.hpp"
-#include "board.hpp"
 
 hash_func hash;
 
@@ -11,9 +10,11 @@ uint64_t rand64(){
 }
 
 void set_hash_function(){
-    for (int sq = 0; sq < 32; sq++){
-        for (int pt = 0; pt < 4; pt++){
-            hash.HASH_FUNCTION[sq][pt] = rand64();
+    for (int piece = 0; piece < 2; piece ++){
+        for (int color = 0; color < 2; color++){
+            for (int sq = 0; sq < 32; sq++){
+                hash.HASH_FUNCTION[piece][color][sq] = rand64();
+            }
         }
     }
     hash.HASH_COLOR = rand64();
@@ -21,7 +22,6 @@ void set_hash_function(){
 
 int tt_table::set_size(int size){
     free(tt);
-
     if (size & (size - 1)){
         size--;
         for (int i = 1; i < 32; i=i*2){
@@ -69,7 +69,7 @@ void tt_table::save(uint64_t boardhash, uint8_t depth, int val, char flags, uint
     
     tt_entry * phashe = &tt[boardhash & tt_size];
 
-    if ( (phashe->hash = boardhash) && (phashe->depth > depth) ) return;
+    if ( (phashe->hash == boardhash) && (phashe->depth > depth) ) return;
 
     phashe->hash = boardhash;
     phashe->val = val;
