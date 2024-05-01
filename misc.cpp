@@ -19,9 +19,10 @@ uint32_t square_to_binary(const int square){
 }
 
 //gets the square index of a binary number
-//NOTE: THERE CAN ONLY BE ONE 1 BIT
+//NOTE: Returns the square - 1, so just be aware
 int binary_to_square(const uint32_t binary){
-   return log2(binary) + 1;
+   if (binary == 0) return 0;
+   return __builtin_ctzll(binary);
 }
 
 //gets the squares of all 1 bits in a bitboard
@@ -31,7 +32,7 @@ std::vector<int> serialize_bb(uint32_t bb){
 
    while (bb){
       uint32_t ls1b = bb & -bb; // isolate LS1B
-      squares.push_back(binary_to_square(ls1b)); //add squares to vector
+      squares.push_back(binary_to_square(ls1b) + 1); //add squares to vector
       bb &= bb-1; // reset LS1B
    }
    return squares;
