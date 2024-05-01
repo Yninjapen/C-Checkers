@@ -9,8 +9,10 @@ https://mediocrechess.blogspot.com/2007/01/guide-aspiration-windows-killer-moves
 
 //VERSION 1.0
 #include "cpu.hpp"
+#include "transposition.hpp"
 
 const int MAX_VAL = 10000;
+uint8_t bestmove;
 
 cpu::cpu(int cpu_color, int cpu_depth){
     color = cpu_color;
@@ -18,6 +20,8 @@ cpu::cpu(int cpu_color, int cpu_depth){
     max_depth = cpu_depth;
     current_depth = max_depth;
     eval_multiplier = opponent * 2 - 1;
+    table.set_size(0x4000000);
+    std::cout << "TABLE SIZE: " << table.tt_size << "\n";
 }
 
 /* changes the color that the cpu plays for */
@@ -158,6 +162,11 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
     if (search_cancelled) return 0;
 
     int val = -MAX_VAL;
+    char bestmove;
+    char tt_move_index = (char)-1;
+    char tt_flag = TT_ALPHA;
+    int raised_alpha = 0;
+
     Move movelist[64];
     Move current_move;
 
@@ -171,8 +180,20 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
        or 50-move rule. */
     if (board.check_repetition()) return draw_eval(board);
 
-    int movecount = board.gen_moves(movelist, (char)-1);
+    if ((val = table.probe(board.hashKey, depth, alpha, beta, &tt_move_index)) != INVALID){
+        if (!is_pv || (val > alpha && val < beta)){
+            if (abs(val) > MAX_VAL - 100) {
+                if (val > 0) val -= ply;
+                else         val += ply;
+            }
+            return val;
+        }
+    }
+
+    int movecount = board.gen_moves(movelist, tt_move_index);
     set_move_scores(movelist, movecount, ply);
+    bestmove = movelist[0].id;
+
     int new_depth = depth - 1;
 
     for (int i = 0; i < movecount; i++){
@@ -193,10 +214,18 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
 
         board2.push_move(current_move);
 
-        val = -search(board2, new_depth, ply + 1, -beta, -alpha, is_pv);
+        if (!raised_alpha){
+            val = -search(board2, new_depth, ply + 1, -beta, -alpha, is_pv);
+        }
+        else{
+            if (-search(board2, new_depth, ply+1, -alpha - 1, -alpha, NO_PV) > alpha){
+                val = -search(board2, new_depth, ply+1, -beta, -alpha, IS_PV);
+            }
+        }
 
         if (search_cancelled) return 0;
         if (val > alpha){
+            bestmove = movelist[i].id;
             if (val >= beta){
 
                 /* If we encounter a good move, we save it as a "killer" move. Then, in future searches,
@@ -206,8 +235,11 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
                 }
 
                 alpha = beta;
+                tt_flag = TT_BETA;
                 break; /* We have encountered a move so good that there is no point in searching further. */
             }
+            tt_flag = TT_EXACT;
+            raised_alpha = 1;
             alpha = val;
         }
     }
@@ -215,8 +247,12 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
     /* If there are no moves, the game is over, and the side
        whose turn it is to play is the loser. */
     if (!movecount){
+        bestmove = -1;
         alpha = -MAX_VAL + ply;
     }
+
+    if (!search_cancelled) table.save(board.hashKey, depth, alpha, tt_flag, bestmove);
+
     return alpha;
 }
 
@@ -287,15 +323,16 @@ int cpu::quiesce(Board &board, int ply, int alpha, int beta){
 /* Search the lowest level of the game tree */
 int cpu::search_root(Board &board, int depth, int alpha, int beta){
     Move movelist[64];
-    int movecount = board.gen_moves(movelist, (char)-1);
+    int movecount = board.gen_moves(movelist, bestmove);
     int val = 0;
+    int best = -MAX_VAL;
 
     for (int i = 0; i < movecount; i++){
         Board board2(board);
 
         /* Puts the current best move at the front of the movelist */
-        order_at_root(movecount, movelist, i);
-
+        //order_at_root(movecount, movelist, i);
+        order_moves(movecount, movelist, i);
         /* Handles clearing the position history */
         if (board.king_bb 
         && (!(board.king_bb & movelist[i].from) //  Checks if it is a pawn move
@@ -305,20 +342,36 @@ int cpu::search_root(Board &board, int depth, int alpha, int beta){
 
         board2.push_move(movelist[i]);
 
-        val = -search(board2, depth - 1, 0, -beta, -alpha, IS_PV);
+        if (best == -MAX_VAL){
+            val = -search(board2, depth - 1, 0, -beta, -alpha, IS_PV);
+        }
+        else{
+            if (-search(board2, depth - 1, 0, -alpha - 1, -alpha, NO_PV) > alpha){
+                val = -search(board2, depth - 1, 0, -beta, -alpha, IS_PV);
+            }
+        }
 
+        if (val > best) best = val;
         /* If the search was cancelled, move on, because we 
            cannot trust the last search as it was cut short. */
         if (search_cancelled) break;
 
         if (val > alpha){
             /* Update the best move */
+            bestmove = movelist[i].id;
             move_to_make = movelist[i];
-            if (val > beta) return beta;
+            if (val > beta){
+                table.save(board.hashKey, depth, beta, TT_BETA, bestmove);
+                return beta;
+            }
 
+            table.save(board.hashKey, depth, alpha, TT_ALPHA, bestmove);
             alpha = val;
         }
     }
+
+    if (!search_cancelled)
+        table.save(board.hashKey, depth, alpha, TT_EXACT, bestmove);
     return alpha;
 }
 
@@ -416,24 +469,6 @@ void cpu::order_moves(int movecount, Move * m, int current){
     m[current] = temp;
 }
 
-void cpu::order_at_root(int movecount, Move * m, int current){
-    int high = current;
-
-    for(int i=current+1; i < movecount; i++){
-        if ((m[i].score > m[high].score)){
-            high = i;
-        }
-        if (m[i] == move_to_make){
-            high = i;
-            break;
-        }
-    }
-
-    Move temp = m[high];
-    m[high] = m[current];
-    m[current] = temp;
-}
-
 /*
 Finds the best move, but is limited by a time limit t(seconds)
 */
@@ -442,6 +477,8 @@ Move cpu::time_search(Board &board, double t_limit, bool feedback){
     board.gen_moves(movelist, (char)-1);
     move_to_make = movelist[0];
     nodes_traversed = 0;
+    table.fails = 0;
+
     if (feedback){
         std::cout << "calculating... \n";
     }
@@ -458,6 +495,5 @@ Move cpu::time_search(Board &board, double t_limit, bool feedback){
         std::cout << ", time elapsed: " << get_time() - search_start << " milliseconds\n";
         std::cout << "Nodes Traversed: " << nodes_traversed << "\n";
     }
-
     return move_to_make;
-}   
+}
