@@ -1,7 +1,7 @@
 #include <iostream>
 #include "cpu.hpp"
 #include "board.hpp"
-#include "new_cpu.hpp"
+//#include "new_cpu.hpp"
 
 int main(){
     set_hash_function();
