@@ -171,7 +171,7 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
        or 50-move rule. */
     if (board.check_repetition()) return draw_eval(board);
 
-    int movecount = board.gen_moves(movelist);
+    int movecount = board.gen_moves(movelist, (char)-1);
     set_move_scores(movelist, movecount, ply);
     int new_depth = depth - 1;
 
@@ -232,7 +232,7 @@ int cpu::quiesce(Board &board, int ply, int alpha, int beta){
 
     /* Generate legal moves*/
     Move movelist[64];
-    int movecount = board.gen_moves(movelist);
+    int movecount = board.gen_moves(movelist, (char)-1);
 
     /* Check if the game is over */
     if (!movecount){
@@ -287,7 +287,7 @@ int cpu::quiesce(Board &board, int ply, int alpha, int beta){
 /* Search the lowest level of the game tree */
 int cpu::search_root(Board &board, int depth, int alpha, int beta){
     Move movelist[64];
-    int movecount = board.gen_moves(movelist);
+    int movecount = board.gen_moves(movelist, (char)-1);
     int val = 0;
 
     for (int i = 0; i < movecount; i++){
@@ -350,7 +350,7 @@ int cpu::search_widen(Board &board, int depth, int val){
 int cpu::search_iterate(Board &board){
     int val;
     Move movelist[64];
-    int move_count = board.gen_moves(movelist);
+    int move_count = board.gen_moves(movelist, (char)-1);
     
     val = search_root(board, 1, -MAX_VAL, MAX_VAL);
     current_depth = 2;
@@ -387,7 +387,7 @@ Move cpu::max_depth_search(Board &board, bool feedback){
     }
 
     Move movelist[64];
-    board.gen_moves(movelist);
+    board.gen_moves(movelist, (char)-1);
     move_to_make = movelist[0];
     time_limit = INFINITY;
 
@@ -439,7 +439,7 @@ Finds the best move, but is limited by a time limit t(seconds)
 */
 Move cpu::time_search(Board &board, double t_limit, bool feedback){
     Move movelist[64];
-    board.gen_moves(movelist);
+    board.gen_moves(movelist, (char)-1);
     move_to_make = movelist[0];
     nodes_traversed = 0;
     if (feedback){

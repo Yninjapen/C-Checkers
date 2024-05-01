@@ -17,11 +17,11 @@
 //VERSION 1.0
 class cpu{
     int max_depth;
-    int current_depth;
     int opponent;
     int eval_multiplier;
 
     public:
+        int current_depth;
         int color;
         int nodes_traversed;
         double time_limit;

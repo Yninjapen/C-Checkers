@@ -1,8 +1,10 @@
 #include <iostream>
 #include "cpu.hpp"
 #include "board.hpp"
+#include "new_cpu.hpp"
 
 int main(){
+    set_hash_function();
     Board board;
     std::vector<Move> move_history;
     Move initial_pos;(4095, 4293918720, 0, 1);
@@ -44,7 +46,7 @@ int main(){
 
     Move movelist[64];
     Move m;
-    int movecount = board.gen_moves(movelist);
+    int movecount = board.gen_moves(movelist, (char)-1);
 
     while(!board.check_win() && !board.check_repetition()){
         board.print_board();
@@ -91,7 +93,7 @@ int main(){
         }
         undone = false;
         movelist[64];
-        movecount = board.gen_moves(movelist);
+        movecount = board.gen_moves(movelist, (char)-1);
     }
 
     board.print_board();
