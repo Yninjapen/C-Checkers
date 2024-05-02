@@ -7,7 +7,7 @@ https://github.com/maksimKorzh/chess_programming/blob/master/didactic_engines/cp
 https://mediocrechess.blogspot.com/2007/01/guide-aspiration-windows-killer-moves.html
 */
 
-//VERSION 1.0
+//VERSION 3.0
 #include "cpu.hpp"
 #include "transposition.hpp"
 

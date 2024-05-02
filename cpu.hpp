@@ -22,7 +22,7 @@ class cpu{
     public:
         int current_depth;
         int color;
-        int nodes_traversed;
+        unsigned long nodes_traversed;
         double time_limit;
         tt_table table;
         
