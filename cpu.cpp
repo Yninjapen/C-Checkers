@@ -98,16 +98,15 @@ int cpu::eval(Board board){
         temp_black &= temp_black-1;
     }
 
-    /* Calculate eval and dampen based on how close we are to a draw */
+    /* Calculate eval and dampen based on how close we are to a draw. */
     int result = (red_score - black_score) * (1 - (float)board.reversible_moves/(float)board.max_moves_without_take);
 
-    /*Adjusts the score to be from the perspective of the player whose turn it is*/
+    /* Adjusts the score to be from the perspective of the player whose turn it is. */
     if (board.turn) return -result;
     return result;
 }
 
 /* Called when search() runs into a draw:
-
     -Rewards drawing when down in material
     -Punishes drawing when up in material
 */
@@ -115,8 +114,7 @@ int cpu::draw_eval(Board &board){
     int red_count = count_bits(board.red_bb);
     int black_count = count_bits(board.black_bb);
     int result = 0;
-    /* If up in material, deduct from score 
-       (deducts double if the opponent has only one piece)*/
+    /* If up in material, deduct from score (deducts double if the opponent has only one piece) */
     if (red_count > black_count){
         result -= (black_count == 1 || red_count >= black_count + 2) ?  10 : 5;
     }
@@ -124,13 +122,14 @@ int cpu::draw_eval(Board &board){
         result += (red_count == 1 || black_count >= red_count + 2) ? 10 : 5;
     }
 
-    /*Adjusts the score to be from the perspective of the player whose turn it is*/
+    /*Adjusts the score to be from the perspective of the player whose turn it is. */
     if (board.turn) result = -result;
     return result;
 }
 
-/* Goes through a list of moves and checks if any are killer moves from 
-   previous iterations. Helps with move ordering.
+/*
+Goes through a list of moves and checks if any are killer moves from 
+previous iterations. Helps with move ordering.
 */
 void cpu::set_move_scores(Move * m, int movecount, int ply){
     for (int i = 0; i < movecount; i++){
@@ -169,16 +168,24 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
     Move movelist[64];
     Move current_move;
 
-    /* If we are at a leaf node, do a quiescence search. This means
-       that we will search until there are no more takes or promotions
-       left on the board, to ensure only relatively quiet positions 
-       are evaluated. */
+    /*
+    If we are at a leaf node, do a quiescence search. This means
+    that we will search until there are no more takes or promotions
+    left on the board, to ensure only relatively quiet positions 
+    are evaluated.
+    */
     if (depth < 1) return quiesce(board, ply, alpha, beta);
 
-    /* Checks that the current position is not a draw by repetition
-       or 50-move rule. */
+    /*
+    Checks that the current position is not a draw by repetition
+    or 50-move rule.
+    */
     if (board.check_repetition()) return draw_eval(board);
 
+    /*
+    Checks to see if we've searched this position before. If we have, get
+    the saved value and return that instead of doing a whole search.
+    */
     if ((val = table.probe(board.hashKey, depth, alpha, beta, &tt_move_index)) != INVALID){
         if (!is_pv || (val > alpha && val < beta)){
             if (abs(val) > MAX_VAL - 100) {
@@ -195,16 +202,19 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
 
     int new_depth = depth - 1;
 
+    /* Loop through all the moves */
     for (int i = 0; i < movecount; i++){
         Board board2(board);
         order_moves(movecount, movelist, i);
         current_move = movelist[i];
 
-        /* If the move being evaluated is a pawn move or a take, we can erase all
-           of the positions that were previously being tracked for repetition, because
-           those positions cannot possibly occur again. We check if there are any kings
-           on the board first so that we don't unnecessarily try to clear the history when
-           there was nothing being tracked in the first place. */
+        /*
+        If the move being evaluated is a pawn move or a take, we can erase all
+        of the positions that were previously being tracked for repetition, because
+        those positions cannot possibly occur again. We check if there are any kings
+        on the board first so that we don't unnecessarily try to clear the history when
+        there was nothing being tracked in the first place.
+        */
         if (board.king_bb
         && (!(board.king_bb & current_move.from) //  Checks if it is a pawn move
         || current_move.pieces_taken)) {              //  Checks if it is a take
@@ -213,6 +223,7 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
 
         board2.push_move(current_move);
 
+        /* Principle Variation Search */
         if (!raised_alpha){
             val = -search(board2, new_depth, ply + 1, -beta, -alpha, is_pv);
         }
@@ -223,12 +234,15 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
         }
 
         if (search_cancelled) return 0;
+
         if (val > alpha){
             bestmove = movelist[i].id;
             if (val >= beta){
 
-                /* If we encounter a good move, we save it as a "killer" move. Then, in future searches,
-                   we can evaluate these moves first, which massively improves the efficiency of the search. */
+                /*
+                If we encounter a good move, we save it as a "killer" move. Then, in future searches,
+                we can evaluate these moves first, which massively improves the efficiency of the search.
+                */
                 if (!current_move.pieces_taken && !current_move.is_promo){
                     set_killers(current_move, ply);
                 }
@@ -243,13 +257,16 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
         }
     }
 
-    /* If there are no moves, the game is over, and the side
-       whose turn it is to play is the loser. */
+    /*
+    If there are no moves, the game is over, and the side
+    whose turn it is to play is the loser.
+    */
     if (!movecount){
         bestmove = -1;
         alpha = -MAX_VAL + ply;
     }
 
+    /* If we haven't run out of time, save the position in our transposition table */
     if (!search_cancelled) table.save(board.hashKey, depth, ply, alpha, tt_flag, bestmove);
 
     return alpha;
@@ -261,6 +278,7 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
    pieces are calculated all the way through.*/
 int cpu::quiesce(Board &board, int ply, int alpha, int beta){
     nodes_traversed++;
+
     check_time();
     if (search_cancelled) return 0;
     if (board.check_repetition()) return draw_eval(board);
@@ -299,8 +317,10 @@ int cpu::quiesce(Board &board, int ply, int alpha, int beta){
 
         Board board2(board);
 
-        /* We know that this move is either a take or a promotion, and
-           in either case we should be clearing the pos_history */
+        /*
+        We know that this move is either a take or a promotion, and
+        in either case we should be clearing the pos_history.
+        */
         if (board.king_bb) {
             board2.clear_pos_history();
         }
@@ -330,29 +350,46 @@ int cpu::search_root(Board &board, int depth, int alpha, int beta){
         Board board2(board);
 
         /* Puts the current best move at the front of the movelist */
-        //order_at_root(movecount, movelist, i);
         order_moves(movecount, movelist, i);
+
         /* Handles clearing the position history */
         if (board.king_bb 
         && (!(board.king_bb & movelist[i].from) //  Checks if it is a pawn move
-        || movelist[i].pieces_taken)) {              //  Checks if it is a take
+        || movelist[i].pieces_taken)) {         //  Checks if it is a take
             board2.clear_pos_history();
         }
 
         board2.push_move(movelist[i]);
 
+ 
+        /*Principle Variation Search*
+
+        This works by assuming that the first move we search will be the best move.
+        So, for the first move, we search using the full window of (alpha, beta).
+        Note: Move ordering must be very good for this to be effective.
+        */
         if (best == -MAX_VAL){
             val = -search(board2, depth - 1, 0, -beta, -alpha, IS_PV);
         }
         else{
+            /* If we're not looking at the first move, we search with a reduced window.*/
             if (-search(board2, depth - 1, 0, -alpha - 1, -alpha, NO_PV) > alpha){
+
+                /*
+                If for some reason this search yields a value better than what we already have,
+                we can no longer assume that the first move was the best one, so we must search again
+                with the full window.
+                */
                 val = -search(board2, depth - 1, 0, -beta, -alpha, IS_PV);
             }
         }
 
         if (val > best) best = val;
-        /* If the search was cancelled, move on, because we 
-           cannot trust the last search as it was cut short. */
+
+        /*
+        If the search was cancelled, move on, because we 
+        cannot trust the last search as it was cut short.
+        */
         if (search_cancelled) break;
 
         if (val > alpha){
@@ -371,6 +408,7 @@ int cpu::search_root(Board &board, int depth, int alpha, int beta){
 
     if (!search_cancelled)
         table.save(board.hashKey, depth, -1, alpha, TT_EXACT, bestmove);
+
     return alpha;
 }
 
@@ -378,17 +416,22 @@ int cpu::search_root(Board &board, int depth, int alpha, int beta){
 int cpu::search_widen(Board &board, int depth, int val){
     int temp = val;
 
-    /* Narrow the search window, using the last search's value as a basis.
-       Using 25 / log10(d + 2) lets us narrow the window as the search gets
-       deeper. */
+    /*
+    Narrow the search window, using the last search's value as a basis.
+    Using 25 / log10(d + 2) lets us narrow the window as the search gets
+    deeper. I haven't seen anyone using this method of narrowing the window 
+    the deeper we go, so be aware it may not actually be good.
+    */
     int window = 25 / log10(depth + 2);
     int alpha = val - window;
     int beta = val + window;
 
     temp = search_root(board, depth, alpha, beta);
 
-    /* If the narrower search fails, we have to re-search with -INF, INF as our window. 
-       This is very costly, but more often then not narrowing the window saves time. */
+    /*
+    If the narrower search fails, we have to re-search with -MAX_VAL, MAX_VAL as our window. 
+    This is very costly, but more often then not narrowing the window saves time.
+    */
     if (temp <= alpha || temp >= beta){
         if (search_cancelled) return val;
         temp = search_root(board, depth, -MAX_VAL, MAX_VAL);
@@ -451,8 +494,7 @@ Move cpu::max_depth_search(Board &board, bool feedback){
     return move_to_make;
 }
 
-//orders the moves based on the previous searches
-//meant to be used only with time_search
+/* Orders the moves based on their score. */
 void cpu::order_moves(int movecount, Move * m, int current){
     
     int high = current;

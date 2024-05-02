@@ -16,7 +16,7 @@
  01    02    03    04
 */
 
-Board::Board(){
+Board::Board() {
    red_bb = 0b00000000000000000000111111111111;
    black_bb = 0b11111111111100000000000000000000;
    king_bb = 0b00000000000000000000000000000000;
@@ -29,8 +29,8 @@ Board::Board(){
    hashKey = calc_hash_key();
 }
 
-//prints a representation of the board to the console
-void Board::print_board(){
+/* Prints a representation of the board to the console */
+void Board::print_board() {
    char arr[32] = {' '};
    uint32_t red_kings = red_bb & king_bb;
    uint32_t red_pieces = red_bb & ~king_bb;
@@ -98,7 +98,8 @@ void Board::print_board(){
    }
 }
 
-void Board::reset(){
+/* Resets the board to the starting position. */
+void Board::reset() {
    red_bb = 0b00000000000000000000111111111111;
    black_bb = 0b11111111111100000000000000000000;
    king_bb = 0b00000000000000000000000000000000;
@@ -111,7 +112,8 @@ void Board::reset(){
    hashKey = calc_hash_key();
 }
 
-uint64_t Board::calc_hash_key(){
+/* Calculates a hash key for the board */
+uint64_t Board::calc_hash_key() {
    uint64_t checkSum = 0;
    for (int i = 0; i < 32; i++){
       if (S[i] & (black_bb | red_bb)){
@@ -126,17 +128,20 @@ uint64_t Board::calc_hash_key(){
    return checkSum;
 }
 
-//takes in a Move object, and changes the board state accordingly
-void Board::push_move(Move move){
+/* Plays a move on the board */
+void Board::push_move(Move move) {
+   /* Increment the move counter and the counter for consecutive reversible moves */
    moves_played++;
-
    reversible_moves = (reversible_moves + 1) * ((move.from & king_bb) && !move.pieces_taken);
 
+   /* Gets a bitboard of all the pieces taken by this move */
    uint32_t taken = (turn) ? (red_bb & ~move.reds) : (black_bb & ~move.blacks);
+
    uint8_t piecetype = (move.from & king_bb) ? 1:0;
 
    turn = !turn;
 
+   /* Updates the hash key of the board */
    hashKey ^= hash.HASH_COLOR;
    hashKey ^= hash.HASH_FUNCTION[piecetype][move.color][binary_to_square(move.from)];
    while(taken){
@@ -146,18 +151,18 @@ void Board::push_move(Move move){
    }
    hashKey ^= hash.HASH_FUNCTION[(move.to & move.kings) ? 1:0][move.color][binary_to_square(move.to)];
 
+   /* Sets the new board state */
    red_bb = move.reds;
    black_bb = move.blacks;
    king_bb = move.kings;
 
-   if (king_bb){ //since checkers positions can only be repeated if there are kings, if there are no kings,
-      rep_stack[reversible_moves] = hashKey;
-   }
+   /* Updates the repetition tracker */
+   if (king_bb) rep_stack[reversible_moves] = hashKey;
 }
 
-void Board::undo(Move prev_pos, Move curr_pos){
+/* Undoes a move, however this isn't used in search and it is really inefficient */
+void Board::undo(Move prev_pos, Move curr_pos) {
    moves_played--;
-
    if (reversible_moves) reversible_moves--;
 
    turn = curr_pos.color;
@@ -166,10 +171,12 @@ void Board::undo(Move prev_pos, Move curr_pos){
    red_bb = prev_pos.reds;
    black_bb = prev_pos.blacks;
    king_bb = prev_pos.kings;
+
    hashKey = calc_hash_key();
 }
 
-uint32_t Board::get_red_movers() const{
+/* Returns all red pieces that can move (not jump) */
+uint32_t Board::get_red_movers() const {
    const uint32_t empty = ~(red_bb | black_bb);
    uint32_t movers = (empty) >> 4;
    const uint32_t red_kings = red_bb & king_bb;
@@ -185,7 +192,8 @@ uint32_t Board::get_red_movers() const{
    return movers;
 }
 
-uint32_t Board::get_black_movers() const{
+/* Returns all black pieces that can move (not jump)*/
+uint32_t Board::get_black_movers() const {
    const uint32_t empty = ~(red_bb | black_bb);
    uint32_t movers = (empty) << 4;
    const uint32_t black_kings = black_bb & king_bb;
@@ -201,7 +209,8 @@ uint32_t Board::get_black_movers() const{
    return movers;
 }
 
-uint32_t Board::get_red_jumpers() const{
+/* Returns all red pieces that can jump */
+uint32_t Board::get_red_jumpers() const {
    const uint32_t empty = ~(red_bb | black_bb);
    const uint32_t red_kings = red_bb & king_bb;
 
@@ -220,7 +229,8 @@ uint32_t Board::get_red_jumpers() const{
    return jumpers;
 }
 
-uint32_t Board::get_black_jumpers() const{
+/* Returns all black pieces that can jump */
+uint32_t Board::get_black_jumpers() const {
    const uint32_t empty = ~(red_bb | black_bb);
    uint32_t jumpers = 0;
    const uint32_t black_kings = black_bb & king_bb;
@@ -240,6 +250,7 @@ uint32_t Board::get_black_jumpers() const{
    return jumpers;
 }
 
+/* If the "jumper" can jump, add the jump to the movelist and return true. Return false if it cannot jump. */
 bool Board::add_red_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings, int pieces_taken){
    const uint32_t empty = ~(temp_red | temp_black);
    const uint32_t adjusted_red = (temp_red & ~jumper);
@@ -340,6 +351,7 @@ bool Board::add_red_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black
    return result;
 }
 
+/* If the "jumper" can jump, add the jump to the movelist and return true. Return false if it cannot jump. */
 bool Board::add_black_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_black, uint32_t temp_kings, int pieces_taken){
    const uint32_t empty = ~(temp_red | temp_black);
    const uint32_t adjusted_black = (temp_black & ~jumper);
@@ -440,7 +452,13 @@ bool Board::add_black_jump(uint32_t jumper, uint32_t temp_red, uint32_t temp_bla
    }
    return result;
 }
-//generates all legal moves
+
+/*
+Generates all legal moves and puts the in the moves array that is passed in.
+Returns the number of legal moves in the position.
+
+TODO: make this much much shorter
+*/
 int Board::gen_moves(Move * moves, uint8_t tt_move){
    m = moves;
    movecount = 0;
@@ -717,11 +735,16 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
       }
    }
 
+   /* If a preferred best move is passed in, boost the score of that move. */
    if ((tt_move != -1) && (tt_move < movecount)) moves[tt_move].score = HASH_SORT;
 
    return movecount;
 }
 
+/*
+Returns a score for a piece based on how far it is up the
+board relative to its color. Used mainly for move ordering.
+*/
 int Board::get_tempo_score(uint32_t piece, int color) const{
    if (color){
          if (piece & ROW5) return 100;
@@ -740,6 +763,7 @@ int Board::get_tempo_score(uint32_t piece, int color) const{
    return 0;
 }
 
+/* Push a move to the moves array and update all the necessary values for the move. */
 void Board::movegen_push(uint32_t new_reds, uint32_t new_blacks, uint32_t new_kings, uint32_t to, int color, bool is_promo, int pieces_taken){
    m[movecount].reds = new_reds;
    m[movecount].blacks = new_blacks;
@@ -759,6 +783,7 @@ void Board::movegen_push(uint32_t new_reds, uint32_t new_blacks, uint32_t new_ki
    movecount++;
 }
 
+/* Return true if the piece can jump. */
 bool Board::can_jump(uint32_t piece, int color) const{
    if (color){
       return get_black_jumpers() & piece;
@@ -766,8 +791,10 @@ bool Board::can_jump(uint32_t piece, int color) const{
    return get_red_jumpers() & piece;
 }
 
-//returns a random legal move
-//NOTE: I'm not entirely sure if this works its a little iffy for some reason
+/*
+Returns a random move. Note that the random seed
+must be set before this is called.
+*/
 Move Board::get_random_move(){
    Move arr[64];
    gen_moves(arr, (char)-1);
@@ -775,29 +802,41 @@ Move Board::get_random_move(){
    return arr[index];
 }
 
-//sets the board to a random position by playing a "moves_to_play" random moves
+/*
+Sets the board to a random position by playing a "moves_to_play" random moves.
+Note again that the random seed must be set before calling this method.
+*/
 void Board::set_random_pos(int moves_to_play){
    for (int i = 0; i < moves_to_play; i++){
       push_move(get_random_move());
    }
 }
 
-/*Returns an int that represents the result.
+/*
+Returns an int that represents the result.
 If the game is not over, 0 is returned.
 A red win returns 1, a black win returns 2.
-Use check_repetition for checking draws.*/
+Use check_repetition for checking draws.
+*/
 int Board::check_win() const{
    if (movecount == 0){
       if (!red_bb) return 2; //if red has no pieces, black wins
       if (!black_bb) return 1; //if black has no pieces, red wins
-      /*If both sides still have pieces, but there are no legal moves,
-      then the side whos turn it is to move loses */
+
+      /*
+      If both sides still have pieces, but there are no legal moves,
+      then the side whos turn it is to move loses.
+      */
       if (turn) return 1;
       return 2;
    }
    return 0;//otherwise, the game is not over
 }
 
+/*
+Returns true if the current position has been repeated at least once or
+if the game is a draw by 50 move rule (50 moves without take or promotion)
+*/
 bool Board::check_repetition() const{
    if (!king_bb) return false;
    if (reversible_moves >= max_moves_without_take) return true;
@@ -843,17 +882,4 @@ void Move::get_move_info(uint32_t previous_pos) const{
    else{
       std::cout << binary_to_square(start) + 1 << "-" << binary_to_square(end) + 1;
    }
-   // std::cout << "Start: expected square is " << binary_to_square(start) << ", binary is: ";
-   // print_binary(start);
-
-   // if (middle){
-   //    std::cout << "Taken: expected square is " << binary_to_square(middle) << ", binary is: ";
-   //    print_binary(middle);
-   // }
-
-   // std::cout << "End: expected square is " << binary_to_square(end) << ", binary is: ";
-   // print_binary(end);
-
-   // std::array<int, 2> result = {binary_to_square(start), binary_to_square(end)};
-   // std::cout << "\n";
 }
