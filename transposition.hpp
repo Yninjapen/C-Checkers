@@ -34,7 +34,7 @@ struct tt_table{
 
     int set_size(int size);
     int probe(uint64_t boardhash, uint8_t depth, int alpha, int beta, char * best);
-    void save(uint64_t boardhash, uint8_t depth, int val, char flags, uint8_t best);
+    void save(uint64_t boardhash, uint8_t depth, int ply, int val, char flags, uint8_t best);
 };
 
 #endif

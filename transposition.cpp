@@ -1,4 +1,5 @@
 #include "transposition.hpp"
+#include "cpu.hpp"
 
 hash_func hash;
 
@@ -64,13 +65,19 @@ int tt_table::probe(uint64_t boardhash, uint8_t depth, int alpha, int beta, char
     return INVALID;
 }
 
-void tt_table::save(uint64_t boardhash, uint8_t depth, int val, char flags, uint8_t best){
+void tt_table::save(uint64_t boardhash, uint8_t depth, int ply, int val, char flags, uint8_t best){
     if (!tt_size) return;
-    
+
     tt_entry * phashe = &tt[boardhash & tt_size];
 
     if ( (phashe->hash == boardhash) && (phashe->depth > depth) ) return;
 
+    /* Adjusts the score of winning positions to represent the win distance
+       from the current position, instead of from the root */
+    if (abs(val) > MAX_VAL - 100){
+        if (val > 0) val += ply;
+        else         val -= ply;
+    }
     phashe->hash = boardhash;
     phashe->val = val;
     phashe->flags = flags;

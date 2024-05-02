@@ -11,7 +11,6 @@ https://mediocrechess.blogspot.com/2007/01/guide-aspiration-windows-killer-moves
 #include "cpu.hpp"
 #include "transposition.hpp"
 
-const int MAX_VAL = 10000;
 uint8_t bestmove;
 
 cpu::cpu(int cpu_color, int cpu_depth){
@@ -251,7 +250,7 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
         alpha = -MAX_VAL + ply;
     }
 
-    if (!search_cancelled) table.save(board.hashKey, depth, alpha, tt_flag, bestmove);
+    if (!search_cancelled) table.save(board.hashKey, depth, ply, alpha, tt_flag, bestmove);
 
     return alpha;
 }
@@ -361,17 +360,17 @@ int cpu::search_root(Board &board, int depth, int alpha, int beta){
             bestmove = movelist[i].id;
             move_to_make = movelist[i];
             if (val > beta){
-                table.save(board.hashKey, depth, beta, TT_BETA, bestmove);
+                table.save(board.hashKey, depth, -1, beta, TT_BETA, bestmove);
                 return beta;
             }
 
-            table.save(board.hashKey, depth, alpha, TT_ALPHA, bestmove);
+            table.save(board.hashKey, depth, -1, alpha, TT_ALPHA, bestmove);
             alpha = val;
         }
     }
 
     if (!search_cancelled)
-        table.save(board.hashKey, depth, alpha, TT_EXACT, bestmove);
+        table.save(board.hashKey, depth, -1, alpha, TT_EXACT, bestmove);
     return alpha;
 }
 
