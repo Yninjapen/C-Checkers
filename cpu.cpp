@@ -160,6 +160,7 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
     if (search_cancelled) return 0;
 
     int val = -MAX_VAL;
+    int mate_value = MAX_VAL - ply;
     char bestmove;
     char tt_move_index = (char)-1;
     char tt_flag = TT_ALPHA;
@@ -167,6 +168,11 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
 
     Move movelist[64];
     Move current_move;
+
+    /* Mate distance pruning */
+    if (alpha < -mate_value) alpha = -mate_value;
+    if (beta > mate_value - 1) beta = mate_value - 1;
+    if (alpha >= beta) return alpha;
 
     /*
     If we are at a leaf node, do a quiescence search. This means
