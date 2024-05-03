@@ -165,6 +165,9 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
     char tt_move_index = (char)-1;
     char tt_flag = TT_ALPHA;
     int raised_alpha = 0;
+    int reduction_depth = 0;
+    int moves_tried = 0;
+    int new_depth;
 
     Move movelist[64];
     Move current_move;
@@ -206,8 +209,6 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
     set_move_scores(movelist, movecount, ply);
     bestmove = movelist[0].id;
 
-    int new_depth = depth - 1;
-
     /* Loop through all the moves */
     for (int i = 0; i < movecount; i++){
         Board board2(board);
@@ -229,6 +230,30 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
 
         board2.push_move(current_move);
 
+        int start = binary_to_square(current_move.from);
+        int end = binary_to_square(current_move.to);
+
+        cutoff[current_move.color][start][end] -= 1;
+        moves_tried++;
+        reduction_depth = 0;
+        new_depth = depth - 1;
+
+        /* Late Move Reduction */
+        if (!is_pv
+        && new_depth > 3
+        && moves_tried > 3
+        && cutoff[current_move.color][start][end] < 50
+        && !current_move.is_promo
+        && (current_move.from != killers[0][ply].from || current_move.to != killers[0][ply].to)
+        && (current_move.from != killers[1][ply].from || current_move.to != killers[1][ply].to)){
+            cutoff[current_move.color][start][end] = 50;
+            reduction_depth = 1;
+            if (moves_tried > 6) reduction_depth += 1;
+            new_depth -= reduction_depth;
+        }
+
+    re_search:
+
         /* Principle Variation Search */
         if (!raised_alpha){
             val = -search(board2, new_depth, ply + 1, -beta, -alpha, is_pv);
@@ -239,10 +264,17 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
             }
         }
 
+        if (reduction_depth && val > alpha){
+            new_depth += reduction_depth;
+            reduction_depth = 0;
+            goto re_search;
+        }
+
         if (search_cancelled) return 0;
 
         if (val > alpha){
             bestmove = movelist[i].id;
+            cutoff[current_move.color][start][end] += 6;
             if (val >= beta){
 
                 /*
@@ -367,7 +399,8 @@ int cpu::search_root(Board &board, int depth, int alpha, int beta){
 
         board2.push_move(movelist[i]);
 
- 
+        cutoff[movelist[i].color][binary_to_square(movelist[i].from)][binary_to_square(movelist[i].to)] -= 1;
+
         /*Principle Variation Search*
 
         This works by assuming that the first move we search will be the best move.
@@ -475,6 +508,16 @@ void cpu::set_killers(Move m, int ply){
             killers[ply][1] = killers[ply][0];
         }
         killers[ply][0] = m;
+    }
+}
+
+void cpu::age_history_table() {
+    for (int cl = 0; cl < 2; cl++){
+        for (int start = 0; start < 32; start++){
+            for (int end = 0; end < 32; end++){
+                cutoff[cl][start][end] = 100;
+            }
+        }
     }
 }
 

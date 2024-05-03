@@ -36,6 +36,7 @@ class cpu{
 
     private:
         Move killers[1024][2];
+        int cutoff[2][32][32];
 
         const uint32_t square_map[34] = {
             (1 << 0), (1 << 1), (1 << 2), (1 << 3), (1 << 4), (1 << 5), (1 << 6), (1 << 7), (1 << 8), (1 << 9), (1 << 10), (1 << 11), (1 << 12), (1 << 13), (1 << 14), (1 << 15),
@@ -59,10 +60,10 @@ class cpu{
         int eval(Board board);
         int draw_eval(Board &board);
         void set_killers(Move m, int ply);
+        void age_history_table();
 
         void set_move_scores(Move * m, int movecount, int ply);
         void order_moves(int movecount, Move * m, int current);
-        void order_at_root(int movecount, Move * m, int current);
 
         inline void check_time(){
             if (!(nodes_traversed & 4095) && !search_cancelled) search_cancelled = get_time() - search_start > time_limit;
