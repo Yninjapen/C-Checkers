@@ -256,6 +256,7 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
         && new_depth > 3
         && moves_tried > 3
         && cutoff[current_move.color][start][end] < 50
+        && !current_move.pieces_taken
         && !current_move.is_promo
         && (current_move.from != killers[0][ply].from || current_move.to != killers[0][ply].to)
         && (current_move.from != killers[1][ply].from || current_move.to != killers[1][ply].to)){
