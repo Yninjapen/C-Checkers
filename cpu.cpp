@@ -209,6 +209,19 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
     set_move_scores(movelist, movecount, ply);
     bestmove = movelist[0].id;
 
+    if (depth < 3
+        && !is_pv
+        && !board.has_takes
+        && movecount > 1
+        && abs(beta - 1) > -MAX_VAL + 100) 
+    {
+        int static_eval = eval(board);
+        int eval_margin = 40 * depth;
+        if (static_eval - eval_margin >= beta){
+            return static_eval - eval_margin;
+        }
+    }
+
     /* Loop through all the moves */
     for (int i = 0; i < movecount; i++){
         Board board2(board);
