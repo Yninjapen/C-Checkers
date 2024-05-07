@@ -155,10 +155,6 @@ Returns an integer evaluation of the position passed in.
 int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv){
     nodes_traversed++;
 
-    /* Cancels the search if time has run out */
-    check_time();
-    if (search_cancelled) return 0;
-
     int val = -MAX_VAL;
     int mate_value = MAX_VAL - ply;
     char bestmove;
@@ -171,6 +167,12 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
 
     Move movelist[64];
     Move current_move;
+
+    _mm_prefetch((char *)&table.tt[board.hashKey & table.tt_size], _MM_HINT_NTA);
+
+    /* Cancels the search if time has run out */
+    check_time();
+    if (search_cancelled) return 0;
 
     /* Mate distance pruning */
     if (alpha < -mate_value) alpha = -mate_value;
