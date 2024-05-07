@@ -468,30 +468,33 @@ int cpu::search_root(Board &board, int depth, int alpha, int beta){
 /* Handles narrowing the aspiration window */
 int cpu::search_widen(Board &board, int depth, int val){
     int temp = val;
+    int searches = 0;
+    const int max_searches = 3;
 
-    /*
-    Narrow the search window, using the last search's value as a basis.
-    Using 25 / log10(d + 2) lets us narrow the window as the search gets
-    deeper. I haven't seen anyone using this method of narrowing the window 
-    the deeper we go, so be aware it may not actually be good.
-    */
-    int window = 25 / log10(depth + 2);
-    int alpha = val - window;
-    int beta = val + window;
+    /* Narrow the search window, using the last search's value as a basis. */
+    int window = (depth < 8) ? 50 : (20 + abs(val) / 8);
+    int alpha  = val - window;
+    int beta   = val + window;
 
-    temp = search_root(board, depth, alpha, beta);
+    while(true){
 
-    /*
-    If the narrower search fails, we have to re-search with -MAX_VAL, MAX_VAL as our window. 
-    This is very costly, but more often then not narrowing the window saves time.
-    */
-    if (temp <= alpha || temp >= beta){
-        if (search_cancelled) return val;
-        temp = search_root(board, depth, -MAX_VAL, MAX_VAL);
+        temp = search_root(board, depth, alpha, beta);
+        searches++;
+
+        if ((temp > alpha && temp < beta) || search_cancelled){
+            break;
+        }
+
+        if      (temp <= alpha) alpha -= window * searches;
+        else if (temp >= beta)  beta  += window * searches;
+
+        if (searches >= max_searches){
+            alpha = -MAX_VAL - 1;
+            beta  =  MAX_VAL + 1;
+        }
     }
-    if (search_cancelled){
-        return val;
-    }
+    if (search_cancelled) return val;
+
     return temp;
 }
 
