@@ -99,6 +99,8 @@ class Board{
         int turn;
         int movecount;
         uint64_t hashKey;
+        int pieceCount[2];
+        int kingCount[2];
 
         Move * m;
         int reversible_moves;
@@ -137,6 +139,7 @@ class Board{
         bool can_jump(uint32_t piece, int color) const;
         void movegen_push(uint32_t new_reds, uint32_t new_blacks, uint32_t new_kings, uint32_t to, int color, bool is_promo, int pieces_taken);
         int get_tempo_score(uint32_t piece, int color) const;
+        void set_flags();
         uint64_t calc_hash_key();
 };
 #endif

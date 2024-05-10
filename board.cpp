@@ -26,7 +26,7 @@ Board::Board() {
    moves_played = 0;
    movecount = 0;
    reversible_moves = 0;
-   hashKey = calc_hash_key();
+   set_flags();
 }
 
 /* Prints a representation of the board to the console */
@@ -109,7 +109,7 @@ void Board::reset() {
    moves_played = 0;
    movecount = 0;
    reversible_moves = 0;
-   hashKey = calc_hash_key();
+   set_flags();
 }
 
 /* Calculates a hash key for the board */
@@ -126,6 +126,25 @@ uint64_t Board::calc_hash_key() {
       checkSum ^= hash.HASH_COLOR;
    }
    return checkSum;
+}
+
+void Board::set_flags(){
+   hashKey = calc_hash_key();
+   pieceCount[0] = 0;
+   pieceCount[1] = 0;
+   kingCount[0] = 0;
+   kingCount[1] = 0;
+
+   for (int i = 0; i < 32; i++){
+      if (S[i] & red_bb){
+         pieceCount[0]++;
+         if (S[i] & king_bb) kingCount[0]++;
+      }
+      else if (S[i] & black_bb){
+         pieceCount[1]++;
+         if (S[i] & king_bb) kingCount[1]++;
+      }
+   }
 }
 
 /* Plays a move on the board */
@@ -146,10 +165,15 @@ void Board::push_move(Move move) {
    hashKey ^= hash.HASH_FUNCTION[piecetype][move.color][binary_to_square(move.from)];
    while(taken){
       uint32_t piece = taken & -taken;
-      hashKey ^= hash.HASH_FUNCTION[(piece & king_bb) ? 1:0][turn][binary_to_square(piece)];
+      piecetype = (piece & king_bb) ? 1:0;
+      hashKey ^= hash.HASH_FUNCTION[piecetype][turn][binary_to_square(piece)];
+      kingCount[turn] -= piecetype;
       taken &= taken - 1;
    }
    hashKey ^= hash.HASH_FUNCTION[(move.to & move.kings) ? 1:0][move.color][binary_to_square(move.to)];
+
+   pieceCount[turn] -= move.pieces_taken;
+   kingCount[move.color] += move.is_promo;
 
    /* Sets the new board state */
    red_bb = move.reds;
@@ -172,7 +196,7 @@ void Board::undo(Move prev_pos, Move curr_pos) {
    black_bb = prev_pos.blacks;
    king_bb = prev_pos.kings;
 
-   hashKey = calc_hash_key();
+   set_flags();
 }
 
 /* Returns all red pieces that can move (not jump) */
