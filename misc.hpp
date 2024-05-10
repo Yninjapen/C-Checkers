@@ -8,9 +8,25 @@
 #include <chrono>
 #include <nmmintrin.h>
 
-int count_bits(uint32_t bb);
+//returns the nubmer of 1 bits in a bitboard
+//aka the "Hamming Weight"
+inline int count_bits(uint32_t bb)
+{
+   #ifdef __GNUC__	
+	   return __builtin_popcountll(bb);
+   #else
+	   return _mm_popcnt_u32(bb);
+   #endif
+}
+
+//gets the square index of a binary number
+//NOTE: Returns the square - 1, so just be aware
+inline int binary_to_square(const uint32_t binary){
+   if (binary == 0) return 0;
+   return __builtin_ctzll(binary);
+}
+
 uint32_t square_to_binary(const int square);
-int binary_to_square(const uint32_t binary);
 std::vector<int> serialize_bb(uint32_t bb);
 void print_binary(uint32_t num);
 double get_time();

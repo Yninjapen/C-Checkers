@@ -1,28 +1,10 @@
 #include "misc.hpp"
 
-//returns the nubmer of 1 bits in a bitboard
-//aka the "Hamming Weight"
-int count_bits(uint32_t bb)
-{
-   #ifdef __GNUC__	
-	   return __builtin_popcountll(bb);
-   #else
-	   return _mm_popcnt_u32(bb);
-   #endif
-}
-
 //converts a square index (according to the chart above) to its bitboard representation
 uint32_t square_to_binary(const int square){
    uint32_t n = 0b1;
    n = n << (square - 1);
    return n;
-}
-
-//gets the square index of a binary number
-//NOTE: Returns the square - 1, so just be aware
-int binary_to_square(const uint32_t binary){
-   if (binary == 0) return 0;
-   return __builtin_ctzll(binary);
 }
 
 //gets the squares of all 1 bits in a bitboard
