@@ -37,71 +37,30 @@ void cpu::set_depth(int new_depth){
 
 /* returns the cpu's evaluation of the position */
 int cpu::eval(Board board){
-    uint32_t temp_red = board.red_bb;
-    uint32_t temp_black = board.black_bb;
+    uint32_t red_kings = board.red_bb & board.king_bb;
+    uint32_t black_kings = board.black_bb & board.king_bb;
+    int result = (board.pieceCount[0] - board.pieceCount[1]) * 75;
+    result    += (board.kingCount[0] - board.kingCount[1]) * 25;
+    result    += (count_bits(board.get_red_movers()) - count_bits(board.get_black_movers())) * 10;
 
-    /* Bitboards of pieces that can move on both sides */
-    uint32_t red_moves = board.get_red_movers();
-    uint32_t black_moves = board.get_black_movers();
-
-    double red_score = 0;
-    double black_score = 0;
-    int red_piece_count = 0;
-    int black_piece_count = 0;
-    int red_king_count = 0;
-    int black_king_count = 0;
     uint32_t piece;
-
-    /*Calculates the scores for red and black
-        A pawn is worth 75
-        A king is worth an extra 25
-        -10 for a king on a single edge
-        +10 for a king in the center
-        +10 for a piece that can move
-    */
-    while (temp_red){
-        piece = temp_red & -temp_red;
-        red_score += 75;
-        red_piece_count++;
-        if (piece & board.king_bb){
-            red_king_count++;
-            red_score += 25;
-            if (piece & SINGLE_EDGE)
-                red_score -= 10;
-            else if (piece & CENTER_8){
-                red_score += 10;
-            }
-        }
-        if (piece & red_moves){
-            red_score += 10;
-        }
-        temp_red &= temp_red-1;
+    while (red_kings){
+        piece = red_kings & -red_kings;
+        if (piece & CENTER_8) result += 10;
+        else if (piece & SINGLE_EDGE) result -= 10;
+        red_kings &= red_kings-1;
+    }
+    while (black_kings){
+        piece = black_kings & -black_kings;
+        if (piece & CENTER_8) result -= 10;
+        else if (piece & SINGLE_EDGE) result += 10;
+        black_kings &= black_kings-1;
     }
 
-    while (temp_black){
-        piece = temp_black & -temp_black;
-        black_score += 75;
-        black_piece_count++;
-        if (piece & board.king_bb){
-            black_king_count++;
-            black_score += 25;
-            if (piece & SINGLE_EDGE){
-                black_score -= 10;
-            }
-            else if (piece & CENTER_8){
-                black_score += 10;
-            }
-        }
-        if (piece & black_moves){
-            black_score += 10;
-        }
-        temp_black &= temp_black-1;
-    }
+    /* dampen based on how close we are to a draw */
+    result *= (1 - (float)board.reversible_moves/(float)board.max_moves_without_take);
 
-    /* Calculate eval and dampen based on how close we are to a draw. */
-    int result = (red_score - black_score) * (1 - (float)board.reversible_moves/(float)board.max_moves_without_take);
-
-    /* Adjusts the score to be from the perspective of the player whose turn it is. */
+    /* Adjusts the score to be from the perspective of the player whose turn it is */
     if (board.turn) return -result;
     return result;
 }
