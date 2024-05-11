@@ -92,6 +92,7 @@ previous iterations. Helps with move ordering.
 */
 void cpu::set_move_scores(Move * m, int movecount, int ply){
     for (int i = 0; i < movecount; i++){
+        m[i].score += history[m[i].color][binary_to_square(m[i].from)][binary_to_square(m[i].to)];
         if ((m[i].from == killers[ply][1].from)
         &&  (m[i].to == killers[ply][1].to)
         &&  (m[i].score < KILLER_SORT - 1)){
@@ -258,6 +259,15 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
                 */
                 if (!current_move.pieces_taken && !current_move.is_promo){
                     set_killers(current_move, ply);
+                    history[current_move.color][start][end] += depth*depth;
+
+                    if (history[current_move.color][start][end] > KILLER_SORT){
+                        for (int cl = 0; cl < 2; cl++)
+                            for (int a = 0; a < 32; a++)
+                                for (int b = 0; b < 32; b++){
+                                    history[cl][a][b] = history[cl][a][b] / 2;
+                                }
+                    }
                 }
 
                 alpha = beta;
@@ -493,6 +503,7 @@ void cpu::age_history_table() {
     for (int cl = 0; cl < 2; cl++){
         for (int start = 0; start < 32; start++){
             for (int end = 0; end < 32; end++){
+                history[cl][start][end] = history[cl][start][end] / 8;
                 cutoff[cl][start][end] = 100;
             }
         }
