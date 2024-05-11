@@ -120,6 +120,7 @@ class Board{
         void undo(Move prev_pos, Move curr_pos);
         int gen_moves(Move * moves, uint8_t tt_move);
         int check_win() const;
+        void do_null_move();
 
         uint32_t get_red_movers() const;
         uint32_t get_black_movers() const;

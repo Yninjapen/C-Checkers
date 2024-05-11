@@ -199,6 +199,12 @@ void Board::undo(Move prev_pos, Move curr_pos) {
    set_flags();
 }
 
+void Board::do_null_move(){
+   hashKey ^= hash.HASH_COLOR;
+   turn = !turn;
+
+}
+
 /* Returns all red pieces that can move (not jump) */
 uint32_t Board::get_red_movers() const {
    const uint32_t empty = ~(red_bb | black_bb);
@@ -771,18 +777,18 @@ board relative to its color. Used mainly for move ordering.
 */
 int Board::get_tempo_score(uint32_t piece, int color) const{
    if (color){
-         if (piece & ROW5) return 100;
-         if (piece & ROW4) return 200;
-         if (piece & ROW3) return 300;
-         if (piece & ROW2) return 400;
-         if (piece & ROW1) return 500;
+         if (piece & ROW5) return 1;
+         if (piece & ROW4) return 2;
+         if (piece & ROW3) return 3;
+         if (piece & ROW2) return 4;
+         if (piece & ROW1) return 5;
    }
    else{
-         if (piece & ROW4) return 100;
-         if (piece & ROW5) return 200;
-         if (piece & ROW6) return 300;
-         if (piece & ROW7) return 400;
-         if (piece & ROW8) return 500;
+         if (piece & ROW4) return 1;
+         if (piece & ROW5) return 2;
+         if (piece & ROW6) return 3;
+         if (piece & ROW7) return 4;
+         if (piece & ROW8) return 5;
    }
    return 0;
 }
