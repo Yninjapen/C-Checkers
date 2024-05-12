@@ -37,4 +37,17 @@ struct tt_table{
     void save(uint64_t boardhash, uint8_t depth, int ply, int val, char flags, uint8_t best);
 };
 
+struct tt_eval_entry{
+    uint64_t hash;
+    int val;
+};
+
+struct tt_eval_table{
+    tt_eval_entry * ett;
+    int ett_size;
+    
+    int set_size(int size);
+    int probe(uint64_t boardHash);
+    void save(uint64_t boardHash, int val);
+};
 #endif

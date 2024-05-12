@@ -114,3 +114,43 @@ void tt_table::save(uint64_t boardhash, uint8_t depth, int ply, int val, char fl
     phashe->depth = depth;
     phashe->bestmove = best;
 }
+
+int tt_eval_table::set_size(int size){
+    free(ett);
+    if (size & (size - 1)){
+        size--;
+        for (int i=1; i < 32; i++){
+            size |= size >> i;
+        }
+        size++;
+        size >>= 1;
+    }
+    if (size < 16){
+        ett_size = 0;
+        return 0;
+    }
+
+    ett_size = (size / sizeof(tt_eval_entry)) - 1;
+    ett = (tt_eval_entry *) malloc(size);
+
+    return 0; 
+}
+
+int tt_eval_table::probe(uint64_t boardHash){
+    if (!ett_size) return INVALID;
+
+    tt_eval_entry * phashe = &ett[boardHash & ett_size];
+
+    if (phashe->hash == boardHash) return phashe->val;
+
+    return INVALID;
+}
+
+void tt_eval_table::save(uint64_t boardHash, int val){
+    if (!ett_size) return;
+
+    tt_eval_entry * phashe = &ett[boardHash & ett_size];
+
+    phashe->hash = boardHash;
+    phashe->val = val;
+}
