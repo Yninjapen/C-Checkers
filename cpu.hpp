@@ -25,7 +25,8 @@ class cpu{
         unsigned long nodes_traversed;
         double time_limit;
         tt_table table;
-        
+        tt_eval_table eval_table;
+
         cpu(int cpu_color = 0, int cpu_depth = 10);
         Move max_depth_search(Board &board, bool feedback = true);
         Move time_search(Board &board, double t_limit, bool feedback = true);
@@ -58,6 +59,7 @@ class cpu{
         int search(Board &board, int depth, int ply, int alpha, int beta, int is_pv);
         int quiesce(Board &board, int ply, int alpha, int beta);
 
+        int past_pawns(Board board);
         int eval(Board board);
         int draw_eval(Board &board);
         void set_killers(Move m, int ply);

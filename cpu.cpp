@@ -20,7 +20,9 @@ cpu::cpu(int cpu_color, int cpu_depth){
     current_depth = max_depth;
     eval_multiplier = opponent * 2 - 1;
     table.set_size(0x4000000);
+    eval_table.set_size(0x4000000);
     std::cout << "TABLE SIZE: " << table.tt_size << "\n";
+    std::cout << "EVAL TABLE SIZE: " << eval_table.ett_size << "\n";
 }
 
 /* changes the color that the cpu plays for */
@@ -35,13 +37,61 @@ void cpu::set_depth(int new_depth){
     max_depth = new_depth;
 }
 
+int cpu::past_pawns(Board board){
+    uint32_t coverage[2] = {board.red_bb, board.black_bb};
+    uint32_t paths[2] = {board.red_bb, board.black_bb};
+    int red_count = 0;
+    int black_count = 0;
+    int turn = board.turn;
+
+    while(paths[0] || paths[1]){
+        if (turn) {
+            /* Increment Paths */
+            paths[1] = (((paths[1] & MASK_R3) >> 3) | ((paths[1] & MASK_R5) >> 5)) | (paths[1] >> 4);
+            paths[1] &= ~(coverage[0] | coverage[1]);
+
+            /* Increment Coverage */
+            coverage[1] |= (((coverage[1] & MASK_R3) >> 3) | ((coverage[1] & MASK_R5) >> 5));
+            coverage[1] |= coverage[1] >> 4;
+            paths[0] &= ~coverage[1];
+
+            if (paths[1] & ROW1) black_count++;
+            paths[1] &= ~ROW1;
+        }
+        else{
+            /* Increment Paths */
+            paths[0] = (((paths[0] & MASK_L3) << 3) | ((paths[0] & MASK_L5) << 5)) | (paths[0] << 4);
+            paths[0] &= ~(coverage[0] | coverage[1]);
+
+            /* Increment Coverage */
+            coverage[0] |= (((coverage[0] & MASK_L3) << 3) | ((coverage[0] & MASK_L5) << 5));
+            coverage[0] |= coverage[0] << 4;
+            paths[1] &= ~coverage[0];
+
+            if (paths[0] & ROW8) red_count++;
+            paths[0] &= ~ROW8;
+        }
+        turn = !turn;
+    }
+
+    return red_count - black_count;
+}
+
 /* returns the cpu's evaluation of the position */
 int cpu::eval(Board board){
+    int probeval = eval_table.probe(board.hashKey);
+    if (probeval != INVALID){
+        return probeval;
+    }
+
     uint32_t red_kings = board.red_bb & board.king_bb;
     uint32_t black_kings = board.black_bb & board.king_bb;
+    const uint32_t red_moves = board.get_red_movers();
+    const uint32_t black_moves = board.get_black_movers();
+
     int result = (board.pieceCount[0] - board.pieceCount[1]) * 75;
     result    += (board.kingCount[0] - board.kingCount[1]) * 25;
-    result    += (count_bits(board.get_red_movers()) - count_bits(board.get_black_movers())) * 10;
+    result    += (count_bits(red_moves & ~black_moves) - count_bits(black_moves & ~red_moves)) * 10;
 
     uint32_t piece;
     while (red_kings){
@@ -57,11 +107,17 @@ int cpu::eval(Board board){
         black_kings &= black_kings-1;
     }
 
+    if (!board.king_bb){
+        int pawn_score = past_pawns(board) * 20;
+        result += pawn_score;
+    }
     /* dampen based on how close we are to a draw */
     result *= (1 - (float)board.reversible_moves/(float)board.max_moves_without_take);
 
     /* Adjusts the score to be from the perspective of the player whose turn it is */
-    if (board.turn) return -result;
+    if (board.turn) result = -result;
+
+    eval_table.save(board.hashKey, result);
     return result;
 }
 
