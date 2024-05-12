@@ -26,14 +26,26 @@ inline int binary_to_square(const uint32_t binary){
    return __builtin_ctzll(binary);
 }
 
-uint32_t square_to_binary(const int square);
-std::vector<int> serialize_bb(uint32_t bb);
-void print_binary(uint32_t num);
-double get_time();
 
 //hashes the bitboard
 inline uint64_t hash_bb(uint32_t reds, uint32_t blacks, uint32_t kings, int turn){
    return ((reds * 37 + blacks) * 37 + kings) * 37 + turn;
 }
 
+inline uint32_t northFill(uint32_t bb){
+   bb |= (bb << 8);
+   bb |= (bb << 16);
+   return bb;
+}
+
+inline uint32_t southFill(uint32_t bb){
+   bb |= (bb >> 8);
+   bb |= (bb >> 16);
+   return bb;
+}
+
+uint32_t square_to_binary(const int square);
+std::vector<int> serialize_bb(uint32_t bb);
+void print_binary(uint32_t num);
+double get_time();
 #endif

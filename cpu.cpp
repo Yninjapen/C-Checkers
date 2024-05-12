@@ -91,7 +91,7 @@ int cpu::eval(Board board){
 
     int result = (board.pieceCount[0] - board.pieceCount[1]) * 75;
     result    += (board.kingCount[0] - board.kingCount[1]) * 25;
-    result    += (count_bits(red_moves & ~black_moves) - count_bits(black_moves & ~red_moves)) * 10;
+    result    += (count_bits(red_moves) - count_bits(black_moves)) * 10;
 
     uint32_t piece;
     while (red_kings){
