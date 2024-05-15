@@ -38,8 +38,8 @@ void cpu::set_depth(int new_depth){
 }
 
 int cpu::past_pawns(Board board){
-    uint32_t coverage[2] = {board.red_bb, board.black_bb};
-    uint32_t paths[2] = {board.red_bb, board.black_bb};
+    uint32_t coverage[2] = {northFill(board.red_bb), southFill(board.black_bb)};
+    uint32_t paths[2] = {board.red_bb & ~coverage[1], board.black_bb & ~coverage[0]};
     int red_count = 0;
     int black_count = 0;
     int turn = board.turn;
@@ -48,7 +48,7 @@ int cpu::past_pawns(Board board){
         if (turn) {
             /* Increment Paths */
             paths[1] = (((paths[1] & MASK_R3) >> 3) | ((paths[1] & MASK_R5) >> 5)) | (paths[1] >> 4);
-            paths[1] &= ~(coverage[0] | coverage[1]);
+            paths[1] &= ~(coverage[0]);
 
             /* Increment Coverage */
             coverage[1] |= (((coverage[1] & MASK_R3) >> 3) | ((coverage[1] & MASK_R5) >> 5));
@@ -61,7 +61,7 @@ int cpu::past_pawns(Board board){
         else{
             /* Increment Paths */
             paths[0] = (((paths[0] & MASK_L3) << 3) | ((paths[0] & MASK_L5) << 5)) | (paths[0] << 4);
-            paths[0] &= ~(coverage[0] | coverage[1]);
+            paths[0] &= ~(coverage[1]);
 
             /* Increment Coverage */
             coverage[0] |= (((coverage[0] & MASK_L3) << 3) | ((coverage[0] & MASK_L5) << 5));
