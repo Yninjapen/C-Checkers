@@ -126,18 +126,17 @@ int cpu::eval(Board board){
     -Punishes drawing when up in material
 */
 int cpu::draw_eval(Board &board){
-    int red_count = count_bits(board.red_bb);
-    int black_count = count_bits(board.black_bb);
     int result = 0;
-    /* If up in material, deduct from score (deducts double if the opponent has only one piece) */
-    if (red_count > black_count){
-        result -= (black_count == 1 || red_count >= black_count + 2) ?  10 : 5;
+    /* If up in material, deduct from score 
+       (deducts double if the opponent has only one piece)*/
+    if (board.pieceCount[0] > board.pieceCount[1]){
+        result -= (board.pieceCount[1] == 1 || board.pieceCount[0] >= board.pieceCount[1] + 2) ?  10 : 5;
     }
-    else if (black_count > red_count){
-        result += (red_count == 1 || black_count >= red_count + 2) ? 10 : 5;
+    else if (board.pieceCount[1] > board.pieceCount[0]){
+        result += (board.pieceCount[0] == 1 || board.pieceCount[1] >= board.pieceCount[0] + 2) ? 10 : 5;
     }
 
-    /*Adjusts the score to be from the perspective of the player whose turn it is. */
+    /*Adjusts the score to be from the perspective of the player whose turn it is*/
     if (board.turn) result = -result;
     return result;
 }
