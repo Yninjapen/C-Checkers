@@ -31,6 +31,7 @@ class cpu{
         Move max_depth_search(Board &board, bool feedback = true);
         Move time_search(Board &board, double t_limit, bool feedback = true);
         int search_root(Board &board, int depth, int alpha, int beta);
+        int search(Board &board, int depth, int ply, int alpha, int beta, int is_pv);
         
         void set_color(int new_color);
         void set_depth(int new_depth);
@@ -56,7 +57,6 @@ class cpu{
 
         int search_iterate(Board &board);
         int search_widen(Board &board, int depth, int val);
-        int search(Board &board, int depth, int ply, int alpha, int beta, int is_pv);
         int quiesce(Board &board, int ply, int alpha, int beta);
 
         int past_pawns(Board board);

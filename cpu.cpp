@@ -271,7 +271,7 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
         /* Late Move Reduction */
         if (!is_pv
         && new_depth > 3
-        && moves_tried > 3
+        && moves_tried > 1
         && cutoff[current_move.color][start][end] < 50
         && !current_move.pieces_taken
         && !current_move.is_promo
