@@ -275,8 +275,8 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
         && cutoff[current_move.color][start][end] < 50
         && !current_move.pieces_taken
         && !current_move.is_promo
-        && (current_move.from != killers[0][ply].from || current_move.to != killers[0][ply].to)
-        && (current_move.from != killers[1][ply].from || current_move.to != killers[1][ply].to)){
+        && (current_move.from != killers[ply][0].from || current_move.to != killers[ply][0].to)
+        && (current_move.from != killers[ply][1].from || current_move.to != killers[ply][1].to)){
             cutoff[current_move.color][start][end] = 50;
             reduction_depth = 1;
             if (moves_tried > 6) reduction_depth += 1;
