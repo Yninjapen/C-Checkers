@@ -112,7 +112,7 @@ int cpu::eval(Board board){
         result += pawn_score;
     }
     /* dampen based on how close we are to a draw */
-    result *= (1 - (float)board.reversible_moves/(float)board.max_moves_without_take);
+    result *= (1 - (float)board.reversible_moves*(0.02));
 
     /* Adjusts the score to be from the perspective of the player whose turn it is */
     if (board.turn) result = -result;
