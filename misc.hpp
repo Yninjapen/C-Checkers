@@ -8,7 +8,7 @@
 #include <chrono>
 #include <nmmintrin.h>
 
-//returns the nubmer of 1 bits in a bitboard
+//returns the number of 1 bits in a bitboard
 //aka the "Hamming Weight"
 inline int count_bits(uint32_t bb)
 {
