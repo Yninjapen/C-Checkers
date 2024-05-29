@@ -59,6 +59,7 @@ class cpu{
         int search_widen(Board &board, int depth, int val);
         int quiesce(Board &board, int ply, int alpha, int beta);
 
+        int mobility_score(Board board);
         int past_pawns(Board board);
         int eval(Board board);
         int draw_eval(Board &board);

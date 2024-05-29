@@ -37,6 +37,40 @@ void cpu::set_depth(int new_depth){
     max_depth = new_depth;
 }
 
+int cpu::mobility_score(Board board) {
+    const uint32_t empty = ~(board.red_bb | board.black_bb);
+    const uint32_t red_movers = board.get_red_movers();
+    const uint32_t red_king_movers = red_movers & board.king_bb;
+    const uint32_t black_movers = board.get_black_movers();
+    const uint32_t black_king_movers = black_movers & board.king_bb;
+    
+    uint32_t red_squares = (((red_movers & MASK_L3) << 3) | ((red_movers & MASK_L5) << 5)) | (red_movers << 4);
+    if (red_king_movers)
+        red_squares |= (((red_king_movers & MASK_R3) >> 3) | ((red_king_movers & MASK_R5) >> 5)) | (red_king_movers >> 4);
+    red_squares &= empty;
+
+    uint32_t black_squares = (((black_movers & MASK_R3) >> 3) | ((black_movers & MASK_R5) >> 5)) | (black_movers >> 4);
+    if (black_king_movers)
+        black_squares |= (((black_king_movers & MASK_L3) << 3) | ((black_king_movers & MASK_L5) << 5)) | (black_king_movers << 4);
+    black_squares &= empty;
+
+    const uint32_t unique_red_moves = (red_squares & ~black_squares);
+    const uint32_t unique_black_moves = (black_squares & ~red_squares);
+
+    uint32_t red_result = ((((unique_red_moves & MASK_R3) >> 3) | ((unique_red_moves & MASK_R5) >> 5)) | (unique_red_moves >> 4)) & red_movers;
+    if (red_king_movers)
+        red_result |= ((((unique_red_moves & MASK_L3) << 3) | ((unique_red_moves & MASK_L5) << 5)) | (unique_red_moves << 4)) & red_king_movers;
+    
+    uint32_t black_result = ((((unique_black_moves & MASK_L3) << 3) | ((unique_black_moves & MASK_L5) << 5)) | (unique_black_moves << 4)) & black_movers;
+    if (black_king_movers)
+        black_result |= ((((unique_black_moves & MASK_R3) >> 3) | ((unique_black_moves & MASK_R5) >> 5)) | (unique_black_moves >> 4)) & black_king_movers;
+
+    //return (count_bits(red_result) - count_bits(black_result)) * 10;
+    int result = (count_bits(red_movers) - count_bits(black_movers)) * 10;
+    result += (count_bits(black_movers & ~black_result) - count_bits(red_movers & ~red_result)) * 5;
+    return result;
+}
+
 int cpu::past_pawns(Board board){
     uint32_t coverage[2] = {northFill(board.red_bb), southFill(board.black_bb)};
     uint32_t king_coverage[2] = {board.red_bb & board.king_bb, board.black_bb & board.king_bb};
@@ -101,12 +135,10 @@ int cpu::eval(Board board){
 
     uint32_t red_kings = board.red_bb & board.king_bb;
     uint32_t black_kings = board.black_bb & board.king_bb;
-    const uint32_t red_moves = board.get_red_movers();
-    const uint32_t black_moves = board.get_black_movers();
 
     int result = (board.pieceCount[0] - board.pieceCount[1]) * 75;
     result    += (board.kingCount[0] - board.kingCount[1]) * 25;
-    result    += (count_bits(red_moves) - count_bits(black_moves)) * 10;
+    result    += mobility_score(board);
 
     uint32_t piece;
     while (red_kings){
