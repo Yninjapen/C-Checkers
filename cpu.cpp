@@ -41,8 +41,10 @@ int cpu::past_pawns(Board board){
     uint32_t coverage[2] = {northFill(board.red_bb), southFill(board.black_bb)};
     uint32_t king_coverage[2] = {board.red_bb & board.king_bb, board.black_bb & board.king_bb};
     uint32_t paths[2] = {(board.red_bb & ~board.king_bb) & ~coverage[1], (board.black_bb & ~board.king_bb) & ~coverage[0]};
-    int red_count = 0;
-    int black_count = 0;
+    int red_score = 0;
+    int black_score = 0;
+    int red_distance = 0;
+    int black_distance = 0;
     int turn = board.turn;
 
     while(paths[0] || paths[1]){
@@ -57,7 +59,12 @@ int cpu::past_pawns(Board board){
 
             paths[0] &= ~(coverage[1] | king_coverage[1]);
 
-            if (paths[1] & ROW1) black_count++;
+            black_distance++;
+
+            if (paths[1] & ROW1){
+                black_score = 24 - black_distance;
+                paths[1] = 0;
+            }
             paths[1] &= ~ROW1;
         }
         else{
@@ -71,13 +78,18 @@ int cpu::past_pawns(Board board){
 
             paths[1] &= ~(coverage[0] | king_coverage[0]);
 
-            if (paths[0] & ROW8) red_count++;
+            red_distance++;
+
+            if (paths[0] & ROW8){
+                red_score = 24 - red_distance;
+                paths[0] = 0;
+            }
             paths[0] &= ~ROW8;
         }
         turn = !turn;
     }
 
-    return red_count - black_count;
+    return red_score - black_score;
 }
 
 /* returns the cpu's evaluation of the position */
@@ -112,7 +124,7 @@ int cpu::eval(Board board){
 
     if ((board.pieceCount[0] != board.kingCount[0]) || (board.pieceCount[1] != board.kingCount[1])){
         int pawn_score = past_pawns(board);
-        result += pawn_score * 20;
+        result += pawn_score;
     }
     /* dampen based on how close we are to a draw */
     result *= (1 - (float)board.reversible_moves*(0.02));
