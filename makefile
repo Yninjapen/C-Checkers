@@ -1,4 +1,4 @@
-CFLAGS = -march=native
+CFLAGS = -march=native -Wall
 
 game: 
 	g++ $(CFLAGS) -o checkers main.cpp misc.cpp transposition.cpp board.cpp cpu.cpp

@@ -15,11 +15,9 @@ Sets up the hash function. Note that this MUST be called before
 any games can be played, otherwise draws by repetition don't work.
 */
 void set_hash_function() {
-    for (int piece = 0; piece < 2; piece ++){
-        for (int color = 0; color < 2; color++){
-            for (int sq = 0; sq < 32; sq++){
-                hash.HASH_FUNCTION[piece][color][sq] = rand64();
-            }
+    for (int pt = 0; pt < 4; pt++){
+        for (int sq = 0; sq < 32; sq++){
+            hash.HASH_FUNCTION[pt][sq] = rand64();
         }
     }
     hash.HASH_COLOR = rand64();

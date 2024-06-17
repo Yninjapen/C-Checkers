@@ -1,17 +1,17 @@
-#ifndef CPU_H
-#define CPU_H
+#pragma once
+
+#include "misc.hpp"
+#include "board.hpp"
+#include "transposition.hpp"
+
+#include <algorithm>
+#include <iostream>
+#include <time.h>
 
 #define DO_NULL    1
 #define NO_NULL    0
 #define IS_PV      1
 #define NO_PV      0
-
-#include <algorithm>
-#include <iostream>
-#include <time.h>
-#include "misc.hpp"
-#include "board.hpp"
-#include "transposition.hpp"
 
 //VERSION 1.0
 class cpu{
@@ -40,6 +40,7 @@ class cpu{
         Move killers[1024][2];
         int cutoff[2][32][32];
         int history[2][32][32];
+        uint8_t bestmove;
 
         const uint32_t square_map[34] = {
             (1 << 0), (1 << 1), (1 << 2), (1 << 3), (1 << 4), (1 << 5), (1 << 6), (1 << 7), (1 << 8), (1 << 9), (1 << 10), (1 << 11), (1 << 12), (1 << 13), (1 << 14), (1 << 15),
@@ -59,8 +60,8 @@ class cpu{
         int search_widen(Board &board, int depth, int val);
         int quiesce(Board &board, int ply, int alpha, int beta);
 
-        int mobility_score(Board board);
-        int past_pawns(Board board);
+        int mobility_score(Bitboards board);
+        int past_pawns(Bitboards board);
         int eval(Board board);
         int draw_eval(Board &board);
         void set_killers(Move m, int ply);
@@ -70,7 +71,8 @@ class cpu{
         void order_moves(int movecount, Move * m, int current);
 
         inline void check_time(){
-            if (!(nodes_traversed & 4095) && !search_cancelled) search_cancelled = get_time() - search_start > time_limit;
+            if (!(nodes_traversed & 4095) && !search_cancelled){
+                search_cancelled = get_time() - search_start > time_limit;
+            }
         }
 };
-#endif

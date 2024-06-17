@@ -9,9 +9,8 @@ https://mediocrechess.blogspot.com/2007/01/guide-aspiration-windows-killer-moves
 
 //VERSION 3.0
 #include "cpu.hpp"
-#include "transposition.hpp"
 
-uint8_t bestmove;
+#include "transposition.hpp"
 
 cpu::cpu(int cpu_color, int cpu_depth){
     color = cpu_color;
@@ -37,129 +36,129 @@ void cpu::set_depth(int new_depth){
     max_depth = new_depth;
 }
 
-int cpu::mobility_score(Board board) {
-    const uint32_t empty = ~(board.red_bb | board.black_bb);
-    const uint32_t red_kings = board.red_bb & board.king_bb;
-    const uint32_t black_kings = board.black_bb & board.king_bb;
+int cpu::mobility_score(Bitboards board) {
+    const uint32_t empty = ~(board.pieces[BLACK] | board.pieces[WHITE]);
+    const uint32_t black_kings = board.pieces[BLACK] & board.kings;
+    const uint32_t white_kings = board.pieces[WHITE] & board.kings;
     
-    uint32_t red_squares = (((board.red_bb & MASK_L3) << 3) | ((board.red_bb & MASK_L5) << 5)) | (board.red_bb << 4);
-    if (red_kings)
-        red_squares |= (((red_kings & MASK_R3) >> 3) | ((red_kings & MASK_R5) >> 5)) | (red_kings >> 4);
-    red_squares &= empty;
-
-    uint32_t black_squares = (((board.black_bb & MASK_R3) >> 3) | ((board.black_bb & MASK_R5) >> 5)) | (board.black_bb >> 4);
+    uint32_t black_squares = (((board.pieces[BLACK] & MASK_L3) << 3) | ((board.pieces[BLACK] & MASK_L5) << 5)) | (board.pieces[BLACK] << 4);
     if (black_kings)
-        black_squares |= (((black_kings & MASK_L3) << 3) | ((black_kings & MASK_L5) << 5)) | (black_kings << 4);
+        black_squares |= (((black_kings & MASK_R3) >> 3) | ((black_kings & MASK_R5) >> 5)) | (black_kings >> 4);
     black_squares &= empty;
 
-    const uint32_t unique_red_moves = (red_squares & ~black_squares);
-    const uint32_t unique_black_moves = (black_squares & ~red_squares);
+    uint32_t white_squares = (((board.pieces[WHITE] & MASK_R3) >> 3) | ((board.pieces[WHITE] & MASK_R5) >> 5)) | (board.pieces[WHITE] >> 4);
+    if (white_kings)
+        white_squares |= (((white_kings & MASK_L3) << 3) | ((white_kings & MASK_L5) << 5)) | (white_kings << 4);
+    white_squares &= empty;
 
-    uint32_t red_result = ((((unique_red_moves & MASK_R3) >> 3) | ((unique_red_moves & MASK_R5) >> 5)) | (unique_red_moves >> 4)) & board.red_bb;
-    if (red_kings)
-        red_result |= ((((unique_red_moves & MASK_L3) << 3) | ((unique_red_moves & MASK_L5) << 5)) | (unique_red_moves << 4)) & red_kings;
-    
-    uint32_t black_result = ((((unique_black_moves & MASK_L3) << 3) | ((unique_black_moves & MASK_L5) << 5)) | (unique_black_moves << 4)) & board.black_bb;
+    const uint32_t unique_black_moves = (black_squares & ~white_squares);
+    const uint32_t unique_white_moves = (white_squares & ~black_squares);
+
+    uint32_t black_result = ((((unique_black_moves & MASK_R3) >> 3) | ((unique_black_moves & MASK_R5) >> 5)) | (unique_black_moves >> 4)) & board.pieces[BLACK];
     if (black_kings)
-        black_result |= ((((unique_black_moves & MASK_R3) >> 3) | ((unique_black_moves & MASK_R5) >> 5)) | (unique_black_moves >> 4)) & black_kings;
+        black_result |= ((((unique_black_moves & MASK_L3) << 3) | ((unique_black_moves & MASK_L5) << 5)) | (unique_black_moves << 4)) & black_kings;
+    
+    uint32_t white_result = ((((unique_white_moves & MASK_L3) << 3) | ((unique_white_moves & MASK_L5) << 5)) | (unique_white_moves << 4)) & board.pieces[WHITE];
+    if (white_kings)
+        white_result |= ((((unique_white_moves & MASK_R3) >> 3) | ((unique_white_moves & MASK_R5) >> 5)) | (unique_white_moves >> 4)) & white_kings;
 
-    return (count_bits(red_result) - count_bits(black_result)) * 10;
+    return (count_bits(black_result) - count_bits(white_result)) * 10;
 }
 
-int cpu::past_pawns(Board board){
-    uint32_t coverage[2] = {northFill(board.red_bb), southFill(board.black_bb)};
-    uint32_t king_coverage[2] = {board.red_bb & board.king_bb, board.black_bb & board.king_bb};
-    uint32_t paths[2] = {(board.red_bb & ~board.king_bb) & ~coverage[1], (board.black_bb & ~board.king_bb) & ~coverage[0]};
-    int red_score = 0;
+int cpu::past_pawns(Bitboards board){
+    uint32_t coverage[2] = {northFill(board.pieces[BLACK]), southFill(board.pieces[WHITE])};
+    uint32_t king_coverage[2] = {board.pieces[BLACK] & board.kings, board.pieces[WHITE] & board.kings};
+    uint32_t paths[2] = {(board.pieces[BLACK] & ~board.kings) & ~coverage[WHITE], (board.pieces[WHITE] & ~board.kings) & ~coverage[BLACK]};
     int black_score = 0;
-    int red_distance = 0;
+    int white_score = 0;
     int black_distance = 0;
-    int turn = board.turn;
+    int white_distance = 0;
+    int turn = board.stm;
 
-    while(paths[0] || paths[1]){
+    while(paths[BLACK] || paths[WHITE]){
         if (turn) {
             /* Increment Paths */
-            paths[1] = (((paths[1] & MASK_R3) >> 3) | ((paths[1] & MASK_R5) >> 5)) | (paths[1] >> 4);
-            paths[1] &= ~(coverage[0] | king_coverage[0]);
+            paths[WHITE] = (((paths[WHITE] & MASK_R3) >> 3) | ((paths[WHITE] & MASK_R5) >> 5)) | (paths[WHITE] >> 4);
+            paths[WHITE] &= ~(coverage[BLACK] | king_coverage[BLACK]);
 
             /* Increment Coverage */
-            coverage[1] |= (((coverage[1] & MASK_R3) >> 3) | ((coverage[1] & MASK_R5) >> 5)) | (coverage[1] >> 4);
-            king_coverage[1] |= (((king_coverage[1] & MASK_L3) << 3) | ((king_coverage[1] & MASK_L5) << 5)) | (king_coverage[1] << 4);
+            coverage[WHITE] |= (((coverage[WHITE] & MASK_R3) >> 3) | ((coverage[WHITE] & MASK_R5) >> 5)) | (coverage[WHITE] >> 4);
+            king_coverage[WHITE] |= (((king_coverage[WHITE] & MASK_L3) << 3) | ((king_coverage[WHITE] & MASK_L5) << 5)) | (king_coverage[WHITE] << 4);
 
-            paths[0] &= ~(coverage[1] | king_coverage[1]);
+            paths[BLACK] &= ~(coverage[WHITE] | king_coverage[WHITE]);
 
-            black_distance++;
+            white_distance++;
 
-            if (paths[1] & ROW1){
-                black_score = 24 - black_distance;
-                paths[1] = 0;
+            if (paths[WHITE] & PROMO_MASK[WHITE]){
+                white_score = 24 - white_distance;
+                paths[WHITE] = 0;
             }
-            paths[1] &= ~ROW1;
+            paths[WHITE] &= ~PROMO_MASK[WHITE];
         }
         else{
             /* Increment Paths */
-            paths[0] = (((paths[0] & MASK_L3) << 3) | ((paths[0] & MASK_L5) << 5)) | (paths[0] << 4);
-            paths[0] &= ~(coverage[1] | king_coverage[1]);
+            paths[BLACK] = (((paths[BLACK] & MASK_L3) << 3) | ((paths[BLACK] & MASK_L5) << 5)) | (paths[BLACK] << 4);
+            paths[BLACK] &= ~(coverage[WHITE] | king_coverage[WHITE]);
 
             /* Increment Coverage */
-            coverage[0] |= (((coverage[0] & MASK_L3) << 3) | ((coverage[0] & MASK_L5) << 5)) | (coverage[0] << 4);
-            king_coverage[0] |= (((king_coverage[0] & MASK_R3) >> 3) | ((king_coverage[0] & MASK_R5) >> 5)) | (king_coverage[0] >> 4);
+            coverage[BLACK] |= (((coverage[BLACK] & MASK_L3) << 3) | ((coverage[BLACK] & MASK_L5) << 5)) | (coverage[BLACK] << 4);
+            king_coverage[BLACK] |= (((king_coverage[BLACK] & MASK_R3) >> 3) | ((king_coverage[BLACK] & MASK_R5) >> 5)) | (king_coverage[BLACK] >> 4);
 
-            paths[1] &= ~(coverage[0] | king_coverage[0]);
+            paths[WHITE] &= ~(coverage[BLACK] | king_coverage[BLACK]);
 
-            red_distance++;
+            black_distance++;
 
-            if (paths[0] & ROW8){
-                red_score = 24 - red_distance;
-                paths[0] = 0;
+            if (paths[BLACK] & PROMO_MASK[BLACK]){
+                black_score = 24 - black_distance;
+                paths[BLACK] = 0;
             }
-            paths[0] &= ~ROW8;
+            paths[BLACK] &= ~PROMO_MASK[BLACK];
         }
         turn = !turn;
     }
 
-    return red_score - black_score;
+    return black_score - white_score;
 }
 
 /* returns the cpu's evaluation of the position */
 int cpu::eval(Board board){
-    int probeval = eval_table.probe(board.hashKey);
+    int probeval = eval_table.probe(board.hash_key);
     if (probeval != INVALID){
         return probeval;
     }
 
-    uint32_t red_kings = board.red_bb & board.king_bb;
-    uint32_t black_kings = board.black_bb & board.king_bb;
+    uint32_t black_kings = board.bb.pieces[BLACK] & board.bb.kings;
+    uint32_t white_kings = board.bb.pieces[WHITE] & board.bb.kings;
 
-    int result = (board.pieceCount[0] - board.pieceCount[1]) * 75;
-    result    += (board.kingCount[0] - board.kingCount[1]) * 25;
-    result    += mobility_score(board);
+    int result = (board.piece_count[BLACK] - board.piece_count[WHITE]) * 75;
+    result    += (board.king_count[BLACK] - board.king_count[WHITE]) * 25;
+    result    += mobility_score(board.bb);
 
     uint32_t piece;
-    while (red_kings){
-        piece = red_kings & -red_kings;
-        if (piece & CENTER_8) result += 10;
-        else if (piece & SINGLE_EDGE) result -= 10;
-        red_kings &= red_kings-1;
-    }
     while (black_kings){
         piece = black_kings & -black_kings;
-        if (piece & CENTER_8) result -= 10;
-        else if (piece & SINGLE_EDGE) result += 10;
+        if (piece & CENTER_8) result += 10;
+        else if (piece & SINGLE_EDGE) result -= 10;
         black_kings &= black_kings-1;
     }
+    while (white_kings){
+        piece = white_kings & -white_kings;
+        if (piece & CENTER_8) result -= 10;
+        else if (piece & SINGLE_EDGE) result += 10;
+        white_kings &= white_kings-1;
+    }
 
-    if ((board.pieceCount[0] != board.kingCount[0]) || (board.pieceCount[1] != board.kingCount[1])){
-        int pawn_score = past_pawns(board);
+    if ((board.piece_count[BLACK] != board.king_count[BLACK]) || (board.piece_count[WHITE] != board.king_count[WHITE])){
+        int pawn_score = past_pawns(board.bb);
         result += pawn_score;
     }
     /* dampen based on how close we are to a draw */
     result *= (1 - (float)board.reversible_moves*(0.02));
 
     /* Adjusts the score to be from the perspective of the player whose turn it is */
-    if (board.turn) result = -result;
+    if (board.bb.stm) result = -result;
 
-    eval_table.save(board.hashKey, result);
+    eval_table.save(board.hash_key, result);
     return result;
 }
 
@@ -168,19 +167,7 @@ int cpu::eval(Board board){
     -Punishes drawing when up in material
 */
 int cpu::draw_eval(Board &board){
-    int result = 0;
-    /* If up in material, deduct from score 
-       (deducts double if the opponent has only one piece)*/
-    if (board.pieceCount[0] > board.pieceCount[1]){
-        result -= (board.pieceCount[1] == 1 || board.pieceCount[0] >= board.pieceCount[1] + 2) ?  10 : 5;
-    }
-    else if (board.pieceCount[1] > board.pieceCount[0]){
-        result += (board.pieceCount[0] == 1 || board.pieceCount[1] >= board.pieceCount[0] + 2) ? 10 : 5;
-    }
-
-    /*Adjusts the score to be from the perspective of the player whose turn it is*/
-    if (board.turn) result = -result;
-    return result;
+    return 0;
 }
 
 /*
@@ -189,7 +176,7 @@ previous iterations. Helps with move ordering.
 */
 void cpu::set_move_scores(Move * m, int movecount, int ply){
     for (int i = 0; i < movecount; i++){
-        m[i].score += history[m[i].color][binary_to_square(m[i].from)][binary_to_square(m[i].to)];
+        m[i].score += history[m[i].color()][m[i].from][m[i].to];
         if ((m[i].from == killers[ply][1].from)
         &&  (m[i].to == killers[ply][1].to)
         &&  (m[i].score < KILLER_SORT - 1)){
@@ -225,7 +212,7 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
     Move movelist[64];
     Move current_move;
 
-    _mm_prefetch((char *)&table.tt[board.hashKey & table.tt_size], _MM_HINT_NTA);
+    _mm_prefetch((char *)&table.tt[board.hash_key & table.tt_size], _MM_HINT_NTA);
 
     /* Cancels the search if time has run out */
     check_time();
@@ -254,7 +241,7 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
     Checks to see if we've searched this position before. If we have, get
     the saved value and return that instead of doing a whole search.
     */
-    if ((val = table.probe(board.hashKey, depth, alpha, beta, &tt_move_index)) != INVALID){
+    if ((val = table.probe(board.hash_key, depth, alpha, beta, &tt_move_index)) != INVALID){
         if (!is_pv || (val > alpha && val < beta)){
             if (abs(val) > MAX_VAL - 100) {
                 if (val > 0) val -= ply;
@@ -287,25 +274,13 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
         order_moves(movecount, movelist, i);
         current_move = movelist[i];
 
-        /*
-        If the move being evaluated is a pawn move or a take, we can erase all
-        of the positions that were previously being tracked for repetition, because
-        those positions cannot possibly occur again. We check if there are any kings
-        on the board first so that we don't unnecessarily try to clear the history when
-        there was nothing being tracked in the first place.
-        */
-        if (board.king_bb
-        && (!(board.king_bb & current_move.from) //  Checks if it is a pawn move
-        || current_move.pieces_taken)) {              //  Checks if it is a take
-            board2.clear_pos_history();
-        }
-
         board2.push_move(current_move);
 
-        int start = binary_to_square(current_move.from);
-        int end = binary_to_square(current_move.to);
+        int start = current_move.from;
+        int end = current_move.to;
+        int color = current_move.color();
 
-        cutoff[current_move.color][start][end] -= 1;
+        cutoff[color][start][end] -= 1;
         moves_tried++;
         reduction_depth = 0;
         new_depth = depth - 1;
@@ -314,12 +289,12 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
         if (!is_pv
         && new_depth > 3
         && moves_tried > 1
-        && cutoff[current_move.color][start][end] < 50
-        && !current_move.pieces_taken
+        && cutoff[color][start][end] < 50
+        && !current_move.captures
         && !current_move.is_promo
-        && (current_move.from != killers[ply][0].from || current_move.to != killers[ply][0].to)
-        && (current_move.from != killers[ply][1].from || current_move.to != killers[ply][1].to)){
-            cutoff[current_move.color][start][end] = 50;
+        && (start != killers[ply][0].from || end != killers[ply][0].to)
+        && (start != killers[ply][1].from || end != killers[ply][1].to)){
+            cutoff[color][start][end] = 50;
             reduction_depth = 1;
             if (moves_tried > 6) reduction_depth += 1;
             new_depth -= reduction_depth;
@@ -347,18 +322,18 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
 
         if (val > alpha){
             bestmove = movelist[i].id;
-            cutoff[current_move.color][start][end] += 6;
+            cutoff[color][start][end] += 6;
             if (val >= beta){
 
                 /*
                 If we encounter a good move, we save it as a "killer" move. Then, in future searches,
                 we can evaluate these moves first, which massively improves the efficiency of the search.
                 */
-                if (!current_move.pieces_taken && !current_move.is_promo){
+                if (!current_move.captures && !current_move.is_promo){
                     set_killers(current_move, ply);
-                    history[current_move.color][start][end] += depth*depth;
+                    history[color][start][end] += depth*depth;
 
-                    if (history[current_move.color][start][end] > KILLER_SORT){
+                    if (history[current_move.color()][start][end] > KILLER_SORT){
                         for (int cl = 0; cl < 2; cl++)
                             for (int a = 0; a < 32; a++)
                                 for (int b = 0; b < 32; b++){
@@ -387,7 +362,7 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
     }
 
     /* If we haven't run out of time, save the position in our transposition table */
-    if (!search_cancelled) table.save(board.hashKey, depth, ply, alpha, tt_flag, bestmove);
+    if (!search_cancelled) table.save(board.hash_key, depth, ply, alpha, tt_flag, bestmove);
 
     return alpha;
 }
@@ -421,7 +396,6 @@ int cpu::quiesce(Board &board, int ply, int alpha, int beta){
 
     /* Get an evaluation of the current position.*/
     int val = eval(board);
-    int stand_pat = val;
 
     /* Check if the evaluation causes a beta cutoff */
     if (val >= beta) return beta;
@@ -433,17 +407,9 @@ int cpu::quiesce(Board &board, int ply, int alpha, int beta){
         order_moves(movecount, movelist, i);
 
         /* If the current move is not a take or a promotion, we do not worry about it */
-        if (!(movelist[i].pieces_taken || movelist[i].is_promo)) continue;
+        if (!(movelist[i].captures || movelist[i].is_promo)) continue;
 
         Board board2(board);
-
-        /*
-        We know that this move is either a take or a promotion, and
-        in either case we should be clearing the pos_history.
-        */
-        if (board.king_bb) {
-            board2.clear_pos_history();
-        }
 
         board2.push_move(movelist[i]);
 
@@ -472,16 +438,9 @@ int cpu::search_root(Board &board, int depth, int alpha, int beta){
         /* Puts the current best move at the front of the movelist */
         order_moves(movecount, movelist, i);
 
-        /* Handles clearing the position history */
-        if (board.king_bb 
-        && (!(board.king_bb & movelist[i].from) //  Checks if it is a pawn move
-        || movelist[i].pieces_taken)) {         //  Checks if it is a take
-            board2.clear_pos_history();
-        }
-
         board2.push_move(movelist[i]);
 
-        cutoff[movelist[i].color][binary_to_square(movelist[i].from)][binary_to_square(movelist[i].to)] -= 1;
+        cutoff[movelist[i].color()][movelist[i].from][movelist[i].to] -= 1;
 
         /*Principle Variation Search*
 
@@ -518,17 +477,17 @@ int cpu::search_root(Board &board, int depth, int alpha, int beta){
             bestmove = movelist[i].id;
             move_to_make = movelist[i];
             if (val > beta){
-                table.save(board.hashKey, depth, -1, beta, TT_BETA, bestmove);
+                table.save(board.hash_key, depth, -1, beta, TT_BETA, bestmove);
                 return beta;
             }
 
-            table.save(board.hashKey, depth, -1, alpha, TT_ALPHA, bestmove);
+            table.save(board.hash_key, depth, -1, alpha, TT_ALPHA, bestmove);
             alpha = val;
         }
     }
 
     if (!search_cancelled)
-        table.save(board.hashKey, depth, -1, alpha, TT_EXACT, bestmove);
+        table.save(board.hash_key, depth, -1, alpha, TT_EXACT, bestmove);
 
     return alpha;
 }
@@ -557,8 +516,8 @@ int cpu::search_widen(Board &board, int depth, int val){
         else if (temp >= beta)  beta  += window * searches;
 
         if (searches >= max_searches){
-            alpha = -MAX_VAL - 1;
-            beta  =  MAX_VAL + 1;
+            alpha = -MAX_VAL;
+            beta  =  MAX_VAL;
         }
     }
     if (search_cancelled) return val;
@@ -588,7 +547,7 @@ int cpu::search_iterate(Board &board){
 
 /* Handles setting the killer moves */
 void cpu::set_killers(Move m, int ply){
-    if (!m.pieces_taken){
+    if (!m.captures){
         if (m.from != killers[ply][0].from || m.to != killers[ply][0].to){
             killers[ply][1] = killers[ply][0];
         }

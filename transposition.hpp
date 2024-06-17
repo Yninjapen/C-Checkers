@@ -8,7 +8,7 @@ uint64_t rand64();
 void set_hash_function();
 
 struct hash_func{
-    uint64_t HASH_FUNCTION[2][2][32];
+    uint64_t HASH_FUNCTION[4][32];
     uint64_t HASH_COLOR;
 } extern hash;
 

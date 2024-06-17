@@ -1,18 +1,14 @@
 #include <iostream>
 #include "cpu.hpp"
 #include "board.hpp"
+#include "transposition.hpp"
 //#include "new_cpu.hpp"
 
 int main(){
     set_hash_function();
     Board board;
     std::vector<Move> move_history;
-    Move initial_pos;(4095, 4293918720, 0, 1);
-    initial_pos.reds = 4095;
-    initial_pos.blacks = 4293918720;
-    initial_pos.kings = 0;
-    initial_pos.color = 1;
-    move_history.push_back(initial_pos);
+    std::vector<uint32_t> king_history;
 
     int x;
     int player_color; //0 == red, 1 == black
@@ -49,12 +45,11 @@ int main(){
     int movecount = board.gen_moves(movelist, (char)-1);
 
     while(!board.check_win() && !board.check_repetition()){
-        board.print_board();
-
-        if ((board.turn == player_color) && !is_cpu_game){
+        board.print();
+        if ((board.bb.stm == player_color) && !is_cpu_game){
             for (int i = 0; i < movecount; i++){
                 std::cout << i << ": ";
-                movelist[i].get_move_info(board.get_all_pieces());
+                movelist[i].print_move_info();
                 std::cout << ", ";
             }
             std::cout << "\n";
@@ -63,16 +58,18 @@ int main(){
                 m = movelist[x];
             }
             else{
-                if (move_history.size() >= 2){
-                    board.undo(move_history[move_history.size() - 2], move_history[move_history.size() - 1]);
+                std::cout << move_history.size() << " moves recorded\n";
+                if (move_history.size() >= 1){
+                    board.undo(move_history[move_history.size() - 1], king_history[king_history.size() - 2]);
                     move_history.pop_back();
-                    undone = true;
+                    king_history.pop_back();
                 }
-                if (move_history.size() >= 2){
-                    board.undo(move_history[move_history.size() - 2], move_history[move_history.size() - 1]);
+                if (move_history.size() >= 1){
+                    board.undo(move_history[move_history.size() - 1], king_history[king_history.size() - 2]);
                     move_history.pop_back();
-                    undone = true;
+                    king_history.pop_back();
                 }
+                undone = true;
             }
             // if (is_depth_search){
             //     m = cpu2.max_depth_search(board, true);
@@ -90,17 +87,14 @@ int main(){
             }
         }
 
-        if (!undone){
-            if (m.is_unreversible()){
-                board.clear_pos_history();
-            }
+        if (!undone) {
             board.push_move(m);
             move_history.push_back(m);
+            king_history.push_back(board.bb.kings);
         }
         undone = false;
-        movelist[64];
         movecount = board.gen_moves(movelist, (char)-1);
     }
 
-    board.print_board();
+    board.print();
 }
