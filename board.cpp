@@ -153,9 +153,9 @@ void Board::push_move(Move move) {
    uint8_t to = move.to;
    uint8_t from = move.from;
    uint32_t taken = move.taken_bb;
+   uint8_t piecetype = move.piecetype;
 
    /* Increment the move counter and the counter for consecutive reversible moves */
-   uint8_t piecetype = move.piecetype;
    reversible_moves = ((piecetype <= WHITE_PIECE) || (taken)) ? 0 : reversible_moves+1;
 
    /* Updates the hash key of the board */
@@ -195,7 +195,7 @@ void Board::push_move(Move move) {
    hash_key ^= hash.HASH_FUNCTION[piecetype][to]; // Update the board's hash
 
    /* Updates the repetition tracker */
-   if (bb.kings) rep_stack[reversible_moves] = hash_key; // Add the hash to the repetition list
+   rep_stack[reversible_moves] = hash_key; // Add the hash to the repetition list
 }
 
 /*
