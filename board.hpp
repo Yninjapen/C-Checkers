@@ -81,7 +81,7 @@ struct Move {
     uint8_t id;
 
     inline uint8_t color() const { return piecetype & 1; }
-    inline bool is_king() const { return (piecetype & 2) >> 1; }
+    inline bool is_king() const { return piecetype & 2; }
 
     /* Make sure to set data to 0 before calling any of these */
     inline void set_color(uint8_t color) { piecetype = (piecetype & 2) | color; }

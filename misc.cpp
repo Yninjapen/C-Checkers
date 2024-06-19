@@ -2,9 +2,7 @@
 
 //converts a square index (according to the chart above) to its bitboard representation
 uint32_t square_to_binary(const int square){
-   uint32_t n = 0b1;
-   n = n << (square - 1);
-   return n;
+   return 1 << square;
 }
 
 //gets the squares of all 1 bits in a bitboard

@@ -153,9 +153,8 @@ void Board::push_move(Move move) {
 
    while (taken) {
       uint32_t piece = taken & -taken;
-      uint8_t taken_piecetype = bb.piecetype(piece);
+      uint8_t taken_piecetype = (!bb.stm) + 2*(!!(piece & bb.kings));
 
-      bb.pieces[!bb.stm] ^= piece;
       hash_key ^= hash.HASH_FUNCTION[taken_piecetype][binary_to_square(piece)];
       piece_count[!bb.stm]--;
       if (taken_piecetype > WHITE_PIECE)
@@ -166,6 +165,7 @@ void Board::push_move(Move move) {
 
    bb.pieces[bb.stm] ^= S[from];
    bb.pieces[bb.stm] |= S[to];
+   bb.pieces[!bb.stm] ^= move.taken_bb;
    bb.kings &= ~move.taken_bb;
 
    if (move.is_promo) {
@@ -203,16 +203,16 @@ void Board::undo(Move move, uint32_t previous_kings) {
       uint8_t taken_piecetype = bb.stm;
       if (piece & previous_kings) {
          taken_piecetype += 2;
-         bb.kings |= piece;
          king_count[bb.stm]++;
       }
 
-      bb.pieces[bb.stm] |= piece;
       hash_key ^= hash.HASH_FUNCTION[taken_piecetype][binary_to_square(piece)];
       piece_count[bb.stm]++;
       taken &= taken - 1;
    }
 
+   bb.pieces[bb.stm] |= taken;
+   bb.kings |= previous_kings;
    bb.pieces[!bb.stm] |= S[from];
    bb.pieces[!bb.stm] ^= S[to];
 
@@ -242,9 +242,8 @@ bool Board::add_black_jump(uint32_t start_square, uint32_t current_square, uint8
    bool result = false;
 
    // Does a quick check to see whether this piece can even jump
-   uint32_t jump_check = 0;
    uint32_t temp = (empty >> 4) & temp_white;
-   jump_check |= (((temp & MASK_R3) >> 3) | ((temp & MASK_R5) >> 5));
+   uint32_t jump_check = (((temp & MASK_R3) >> 3) | ((temp & MASK_R5) >> 5));
    temp = (((empty & MASK_R3) >> 3) | ((empty & MASK_R5) >> 5)) & temp_white;
    jump_check |= (temp >> 4);
 
@@ -291,7 +290,6 @@ bool Board::add_black_jump(uint32_t start_square, uint32_t current_square, uint8
    return result;
 }
 
-/* TODO: Update to agree with new system */
 /* If the "jumper" can jump, add the jump to the movelist and return true. Return false if it cannot jump. */
 bool Board::add_white_jump(uint32_t start_square, uint32_t current_square, uint8_t captures, uint32_t taken_bb){
    const uint32_t temp_black = bb.pieces[BLACK] ^ taken_bb;
@@ -303,9 +301,8 @@ bool Board::add_white_jump(uint32_t start_square, uint32_t current_square, uint8
    bool result = false;
 
    // Does a quick check to see whether this piece can even jump
-   uint32_t jump_check = 0;
    uint32_t temp = (empty << 4) & temp_black;
-   jump_check |= (((temp & MASK_L3) << 3) | ((temp & MASK_L5) << 5));
+   uint32_t jump_check = (((temp & MASK_L3) << 3) | ((temp & MASK_L5) << 5));
    temp = (((empty & MASK_L3) << 3) | ((empty & MASK_L5) << 5)) & temp_black;
    jump_check |= (temp << 4);
 
