@@ -107,7 +107,12 @@ void Board::reset() {
    set_flags();
 }
 
-/* Calculates a hash key for the board */
+/* 
+Calculates a hash key for the board
+
+@return 
+   the hash key
+ */
 uint64_t Board::calc_hash_key() {
    uint64_t checkSum = 0;
    for (int i = 0; i < 32; i++){
@@ -138,7 +143,12 @@ void Board::set_flags(){
    }
 }
 
-/* Plays a move on the board */
+/*
+Plays a move on the board
+
+@param move 
+   The move to be played
+*/
 void Board::push_move(Move move) {
    uint8_t to = move.to;
    uint8_t from = move.from;
@@ -188,7 +198,14 @@ void Board::push_move(Move move) {
    if (bb.kings) rep_stack[reversible_moves] = hash_key; // Add the hash to the repetition list
 }
 
-/* Undoes a move, however this isn't used in search and it is really inefficient */
+/*
+Undoes a move
+
+@param move 
+   Move to be undone
+@param previous_kings 
+   The king bitboard from the previous position
+*/
 void Board::undo(Move move, uint32_t previous_kings) {
    if (reversible_moves) reversible_moves--;
 
@@ -233,7 +250,21 @@ void Board::undo(Move move, uint32_t previous_kings) {
    hash_key ^= hash.HASH_FUNCTION[piecetype][to];
 }
 
-/* If the "jumper" can jump, add the jump to the movelist and return true. Return false if it cannot jump. */
+/*
+If the "jumper" can jump, add the jump to the movelist and return true. Return false if it cannot jump. Use this method for black pieces.
+
+@param start_square
+   Where the jump initially started
+@param current_square
+   Where the piece jumping currently is in its jump
+@param captures
+   How many pieces this jump has taken so far
+@param taken_bb
+   A bitboard of all the pieces that this jump has taken so far
+
+@return
+   true if the piece can jump again, false if the piece cannot jump again
+*/
 bool Board::add_black_jump(uint32_t start_square, uint32_t current_square, uint8_t captures, uint32_t taken_bb){
    const uint32_t temp_black = (bb.pieces[BLACK] ^ start_square) | current_square;
    const uint32_t temp_white = bb.pieces[WHITE] ^ taken_bb;
@@ -292,7 +323,21 @@ bool Board::add_black_jump(uint32_t start_square, uint32_t current_square, uint8
    return result;
 }
 
-/* If the "jumper" can jump, add the jump to the movelist and return true. Return false if it cannot jump. */
+/*
+If the "jumper" can jump, add the jump to the movelist and return true. Return false if it cannot jump. Use this method for white pieces.
+
+@param start_square
+   Where the jump initially started
+@param current_square
+   Where the piece jumping currently is in its jump
+@param captures
+   How many pieces this jump has taken so far
+@param taken_bb
+   A bitboard of all the pieces that this jump has taken so far
+
+@return
+   true if the piece can jump again, false if the piece cannot jump again
+*/
 bool Board::add_white_jump(uint32_t start_square, uint32_t current_square, uint8_t captures, uint32_t taken_bb){
    const uint32_t temp_black = bb.pieces[BLACK] ^ taken_bb;
    const uint32_t temp_white = (bb.pieces[WHITE] ^ start_square) | current_square;
@@ -353,14 +398,17 @@ bool Board::add_white_jump(uint32_t start_square, uint32_t current_square, uint8
 }
 
 /*
-Generates all legal moves and puts the in the moves array that is passed in.
-Returns the number of legal moves in the position.
-
-TODO: make this much much shorter
+Generates all legal moves and puts them in the external_movelist array that is passed in.
+@param external_movelist
+   an array that will be populated by all the legal moves
+@param tt_move
+   the id of the best move fetched from the transposition table
+@return
+   the number of legal moves in the position
 */
 int Board::gen_moves(Move * external_movelist, uint8_t tt_move){
    has_takes = false;
-   movecount = 0;
+   legal_move_count = 0;
    movelist = external_movelist;
    const uint32_t empty = ~(bb.all_pieces());
 
@@ -488,25 +536,31 @@ int Board::gen_moves(Move * external_movelist, uint8_t tt_move){
    } // Black Moves
 
    /* If a preferred best move is passed in, boost the score of that move. */
-   if ((tt_move != -1) && (tt_move < movecount)) external_movelist[tt_move].score = HASH_SORT;
+   if ((tt_move != -1) && (tt_move < legal_move_count)) external_movelist[tt_move].score = HASH_SORT;
 
-   return movecount;
+   return legal_move_count;
 }
 
 /*
-Returns a random move. Note that the random seed
-must be set before this is called.
+Get a random move. Note that the random
+seed must be set before this is called.
+
+@return
+   A random legal move
 */
 Move Board::get_random_move(){
    Move arr[64];
    gen_moves(arr, (char)-1);
-   int index = rand() % movecount;
+   int index = rand() % legal_move_count;
    return arr[index];
 }
 
 /*
 Sets the board to a random position by playing "moves_to_play" random moves.
 Note that the random seed must be set before calling this method.
+
+@param moves_to_play
+   How many moves should be played to get to the random position
 */
 void Board::set_random_pos(int moves_to_play){
    for (int i = 0; i < moves_to_play; i++){
@@ -515,21 +569,25 @@ void Board::set_random_pos(int moves_to_play){
 }
 
 /*
-Returns an int that represents the result.
-If the game is not over, 0 is returned.
-A Black win returns 1, a White win returns 2.
-Use check_repetition for checking draws.
+Checks if the current position has a winner. Use check_repetition for checking draws.
+
+@return
+   an int that represents the result. If the game is not over, return 0. A Black win returns 1, a White win returns 2.
 */
 int Board::check_win() const{
-   if (movecount == 0){//        (1)             (0)
+   if (legal_move_count == 0){
+      //                         (1)             (0)
       return 2 - bb.stm; // 2 - WHITE == 1, 2 - BLACK == 2
    }
-   return 0;//otherwise, the game is not over
+   return 0; //otherwise, the game is not over
 }
 
 /*
-Returns true if the current position has been repeated at least once or
-if the game is a draw by 50 move rule (50 moves without take or promotion)
+Checks whether the current position is a draw by repetition or 50 move rule.
+
+@return
+   true if the current position has been repeated at least once or if 
+   the game is a draw by 50 move rule (50 moves without take or promotion)
 */
 bool Board::check_repetition() const{
    if (!bb.kings) return false;
@@ -543,7 +601,7 @@ bool Board::check_repetition() const{
    return false;
 }
 
-//prints the start and end square of the move, as well as the middle (if applicable)
+/* Prints the start and end square of the move, as well as any taken squares */
 void Move::print_move_info() {
    std::cout << (int)from;
    uint32_t taken = taken_bb;

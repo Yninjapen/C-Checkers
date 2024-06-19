@@ -204,8 +204,8 @@ struct Board {
         }
 
     private:
-        /* Number of legal moves on the board, NOT the number of moves played*/
-        int movecount;
+        /* Number of legal moves on the board */
+        int legal_move_count;
 
         Move * movelist;
 
@@ -233,25 +233,25 @@ struct Board {
             return 0;
         }
         inline void movegen_push(uint32_t from, uint32_t to, uint8_t captures, uint32_t taken_bb) {
-            movelist[movecount].from = binary_to_square(from);
-            movelist[movecount].to = binary_to_square(to);
-            movelist[movecount].set_color(bb.stm);
-            movelist[movecount].captures = captures;
-            movelist[movecount].taken_bb = taken_bb;
-            movelist[movecount].is_promo = false;
-            movelist[movecount].score = 0;
+            movelist[legal_move_count].from = binary_to_square(from);
+            movelist[legal_move_count].to = binary_to_square(to);
+            movelist[legal_move_count].set_color(bb.stm);
+            movelist[legal_move_count].captures = captures;
+            movelist[legal_move_count].taken_bb = taken_bb;
+            movelist[legal_move_count].is_promo = false;
+            movelist[legal_move_count].score = 0;
 
             bool is_king = from & bb.kings;
-            movelist[movecount].set_is_king(is_king);
+            movelist[legal_move_count].set_is_king(is_king);
             if (!is_king) {
-                movelist[movecount].is_promo = to & PROMO_MASK[bb.stm];
-                movelist[movecount].score += get_tempo_score(to, bb.stm);
+                movelist[legal_move_count].is_promo = to & PROMO_MASK[bb.stm];
+                movelist[legal_move_count].score += get_tempo_score(to, bb.stm);
             }
 
-            if (movelist[movecount].is_promo) movelist[movecount].score += PROMO_SORT;
+            if (movelist[legal_move_count].is_promo) movelist[legal_move_count].score += PROMO_SORT;
 
-            movelist[movecount].score += captures * TAKE_SORT;
-            movelist[movecount].id = movecount;
-            movecount++;
+            movelist[legal_move_count].score += captures * TAKE_SORT;
+            movelist[legal_move_count].id = legal_move_count;
+            legal_move_count++;
         }
 };
