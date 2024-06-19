@@ -9,15 +9,17 @@
 #include <time.h>
 #include <cassert>
 
-/* Bitboard configuration
-    29    30    31    32
- 25    26    27    28  
-    21    22    23    24
- 17    18    19    20
-    13    14    15    16
- 09    10    11    12  
-    05    06    07    08
- 01    02    03    04
+/* Board Representation
+         WHITE
+   28    29    30    31
+24    25    26    27  
+   20    21    22    23
+16    17    18    19  
+   12    13    14    15
+08    09    10    11  
+   04    05    06    07
+00    01    02    03  
+         BLACK
 */
 
 Board::Board() {

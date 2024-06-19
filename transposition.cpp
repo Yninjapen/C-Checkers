@@ -1,4 +1,5 @@
 #include "transposition.hpp"
+
 #include "cpu.hpp"
 
 hash_func hash;

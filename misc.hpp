@@ -1,5 +1,4 @@
-#ifndef MISC
-#define MISC
+#pragma once
 
 #include <math.h>
 #include <vector>
@@ -48,4 +47,3 @@ uint32_t square_to_binary(const int square);
 std::vector<int> serialize_bb(uint32_t bb);
 void print_binary(uint32_t num);
 double get_time();
-#endif

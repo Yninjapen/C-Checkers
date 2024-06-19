@@ -1,8 +1,8 @@
-#ifndef TRANSPOSITION_H
-#define TRANSPOSITION_H
+#pragma once
+
+#include "board.hpp"
 
 #include <cstdint>
-#include "board.hpp"
 
 uint64_t rand64();
 void set_hash_function();
@@ -50,4 +50,3 @@ struct tt_eval_table{
     int probe(uint64_t boardHash);
     void save(uint64_t boardHash, int val);
 };
-#endif
