@@ -195,7 +195,7 @@ struct Board {
 
         void push_move(Move move);
         void undo(Move move, uint32_t previous_kings);
-        int gen_moves(Move * moves, uint8_t tt_move);
+        int gen_moves(Move * external_movelist, uint8_t tt_move);
         int check_win() const;
         bool check_repetition() const;
 
@@ -207,7 +207,7 @@ struct Board {
         /* Number of legal moves on the board, NOT the number of moves played*/
         int movecount;
 
-        Move * m;
+        Move * movelist;
 
         bool add_black_jump(uint32_t start_square, uint32_t current_square, uint8_t captures, uint32_t taken_bb);
         bool add_white_jump(uint32_t start_square, uint32_t current_square, uint8_t captures, uint32_t taken_bb);
@@ -233,25 +233,25 @@ struct Board {
             return 0;
         }
         inline void movegen_push(uint32_t from, uint32_t to, uint8_t captures, uint32_t taken_bb) {
-            m[movecount].from = binary_to_square(from);
-            m[movecount].to = binary_to_square(to);
-            m[movecount].set_color(bb.stm);
-            m[movecount].captures = captures;
-            m[movecount].taken_bb = taken_bb;
-            m[movecount].is_promo = false;
-            m[movecount].score = 0;
+            movelist[movecount].from = binary_to_square(from);
+            movelist[movecount].to = binary_to_square(to);
+            movelist[movecount].set_color(bb.stm);
+            movelist[movecount].captures = captures;
+            movelist[movecount].taken_bb = taken_bb;
+            movelist[movecount].is_promo = false;
+            movelist[movecount].score = 0;
 
             bool is_king = from & bb.kings;
-            m[movecount].set_is_king(is_king);
+            movelist[movecount].set_is_king(is_king);
             if (!is_king) {
-                m[movecount].is_promo = to & PROMO_MASK[bb.stm];
-                m[movecount].score += get_tempo_score(to, bb.stm);
+                movelist[movecount].is_promo = to & PROMO_MASK[bb.stm];
+                movelist[movecount].score += get_tempo_score(to, bb.stm);
             }
 
-            if (m[movecount].is_promo) m[movecount].score += PROMO_SORT;
+            if (movelist[movecount].is_promo) movelist[movecount].score += PROMO_SORT;
 
-            m[movecount].score += captures * TAKE_SORT;
-            m[movecount].id = movecount;
+            movelist[movecount].score += captures * TAKE_SORT;
+            movelist[movecount].id = movecount;
             movecount++;
         }
 };

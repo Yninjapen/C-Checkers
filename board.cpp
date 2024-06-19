@@ -121,6 +121,7 @@ uint64_t Board::calc_hash_key() {
    return checkSum;
 }
 
+/* Ensure the hash_key of the board and all piece counters are correct */
 void Board::set_flags(){
    hash_key = calc_hash_key();
    piece_count[0] = 0;
@@ -151,39 +152,40 @@ void Board::push_move(Move move) {
    hash_key ^= hash.HASH_COLOR;
    hash_key ^= hash.HASH_FUNCTION[piecetype][from];
 
+   /* Loop through taken pieces and do all necessary handling */
    while (taken) {
       uint32_t piece = taken & -taken;
       uint8_t taken_piecetype = (!bb.stm) + 2*(!!(piece & bb.kings));
 
-      hash_key ^= hash.HASH_FUNCTION[taken_piecetype][binary_to_square(piece)];
-      piece_count[!bb.stm]--;
-      if (taken_piecetype > WHITE_PIECE)
+      hash_key ^= hash.HASH_FUNCTION[taken_piecetype][binary_to_square(piece)]; // Update the board's hash for the removed piece
+      piece_count[!bb.stm]--; // Decrement the piece counter
+      if (taken_piecetype > WHITE_PIECE) // If the piece was a king, decrement the king counter
          king_count[!bb.stm]--;
 
       taken &= taken - 1;
    }
 
-   bb.pieces[bb.stm] ^= S[from];
-   bb.pieces[bb.stm] |= S[to];
-   bb.pieces[!bb.stm] ^= move.taken_bb;
-   bb.kings &= ~move.taken_bb;
+   bb.pieces[bb.stm] ^= S[from];        // Remove the piece that is being moved from its start square
+   bb.pieces[bb.stm] |= S[to];          // Put it back down on the square it lands
+   bb.pieces[!bb.stm] ^= move.taken_bb; // Remove all taken pieces from the board
+   bb.kings &= ~move.taken_bb;          // Remove all taken pieces from the king bitboard
 
    if (move.is_promo) {
-      piecetype += 2;
-      king_count[bb.stm]++;
-      bb.kings |= S[to];
+      piecetype += 2;       // Change the piecetype to a king
+      king_count[bb.stm]++; // Increment King counter
+      bb.kings |= S[to];    // Add the piece to the king bitboard
    }
    else if (move.is_king()) {
-      bb.kings ^= S[from];
-      bb.kings |= S[to];
+      bb.kings ^= S[from];  // Remove the piece that is being moved from its start square on the king bitboard
+      bb.kings |= S[to];    // Put it back down on the square it lands
    }
 
-   bb.stm = !bb.stm;
+   bb.stm = !bb.stm; // Switch the side to move
 
-   hash_key ^= hash.HASH_FUNCTION[piecetype][to];
+   hash_key ^= hash.HASH_FUNCTION[piecetype][to]; // Update the board's hash
 
    /* Updates the repetition tracker */
-   if (bb.kings) rep_stack[reversible_moves] = hash_key;
+   if (bb.kings) rep_stack[reversible_moves] = hash_key; // Add the hash to the repetition list
 }
 
 /* Undoes a move, however this isn't used in search and it is really inefficient */
@@ -356,18 +358,19 @@ Returns the number of legal moves in the position.
 
 TODO: make this much much shorter
 */
-int Board::gen_moves(Move * moves, uint8_t tt_move){
+int Board::gen_moves(Move * external_movelist, uint8_t tt_move){
    has_takes = false;
    movecount = 0;
-   m = moves;
+   movelist = external_movelist;
    const uint32_t empty = ~(bb.all_pieces());
 
    if (bb.stm) { // White Moves
       uint32_t jumpers = bb.get_white_jumpers();
-      if (jumpers) {
+      if (jumpers) { // White Jumps
          has_takes = true;
          uint32_t piece, taken, dest;
-         while (jumpers) {
+
+         while (jumpers) { //Loop through white pieces that can jump
             piece = jumpers & -jumpers;
             taken = (piece >> 4) & bb.pieces[BLACK];
             dest = (((taken & MASK_R3) >> 3) | ((taken & MASK_R5) >> 5)) & empty;
@@ -396,12 +399,12 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
                }
             }
             jumpers &= jumpers-1;
-         }
-      }
-      else {
+         } // White Jumpers Loop
+      } // White Jump Moves
+      else { // White Non-Capture Moves
          uint32_t movers = bb.get_white_movers();
          uint32_t piece, dest;
-         while (movers) {
+         while (movers) { // Loop Through Non-Captures
             piece = movers & -movers;
             dest = (piece >> 4) & empty;
             if (dest) 
@@ -418,15 +421,17 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
                   movegen_push(piece, dest, 0, 0);
             }
             movers &= movers-1;
-         }
-      }
-   }
-   else {
+         } // White Non-Captures Loop
+      } // White Non-Captures
+   } // White Moves
+
+   else { // Black Moves
       uint32_t jumpers = bb.get_black_jumpers();
-      if (jumpers) {
+      if (jumpers) { // Black Jumps
          has_takes = true;
          uint32_t piece, taken, dest;
-         while (jumpers) {
+
+         while (jumpers) { // Loop through black pieces that can jump
             piece = jumpers & -jumpers;
             taken = (piece << 4) & bb.pieces[WHITE];
             dest = (((taken & MASK_L3) << 3) | ((taken & MASK_L5) << 5)) & empty;
@@ -455,12 +460,13 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
                }
             }
             jumpers &= jumpers-1;
-         }
-      }
-      else {
+         } // Black Jumpers Loop
+      } // Black Jump Moves
+
+      else { // Black Non-Captures
          uint32_t movers = bb.get_black_movers();
          uint32_t piece, dest;
-         while (movers) {
+         while (movers) { // Loop through Non-Captures
             piece = movers & -movers;
             dest = (piece << 4) & empty;
             if (dest)
@@ -477,12 +483,13 @@ int Board::gen_moves(Move * moves, uint8_t tt_move){
                   movegen_push(piece, dest, 0, 0);
             }
             movers &= movers-1;
-         }
-      }
-   }
+         } // Black Non-Captures Loop
+      } // Black Non-Captures
+   } // Black Moves
+
    /* If a preferred best move is passed in, boost the score of that move. */
-   if ((tt_move != -1) && (tt_move < movecount)) moves[tt_move].score = HASH_SORT;
-   
+   if ((tt_move != -1) && (tt_move < movecount)) external_movelist[tt_move].score = HASH_SORT;
+
    return movecount;
 }
 
@@ -498,8 +505,8 @@ Move Board::get_random_move(){
 }
 
 /*
-Sets the board to a random position by playing a "moves_to_play" random moves.
-Note again that the random seed must be set before calling this method.
+Sets the board to a random position by playing "moves_to_play" random moves.
+Note that the random seed must be set before calling this method.
 */
 void Board::set_random_pos(int moves_to_play){
    for (int i = 0; i < moves_to_play; i++){
@@ -514,9 +521,8 @@ A Black win returns 1, a White win returns 2.
 Use check_repetition for checking draws.
 */
 int Board::check_win() const{
-   if (movecount == 0){
-      if (bb.stm) return 1;
-      return 2;
+   if (movecount == 0){//        (1)             (0)
+      return 2 - bb.stm; // 2 - WHITE == 1, 2 - BLACK == 2
    }
    return 0;//otherwise, the game is not over
 }
