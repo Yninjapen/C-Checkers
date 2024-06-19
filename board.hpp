@@ -15,6 +15,7 @@
 #define INVALID 32767
 
 #define MAX_VAL 10000
+#define MAX_MOVES 28
 
 /* Board Representation
          WHITE

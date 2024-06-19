@@ -40,7 +40,7 @@ int main(){
     cpu cpu1(1 - player_color, cpu_depth);
     cpu cpu2(player_color, cpu_depth);
 
-    Move movelist[64];
+    Move movelist[MAX_MOVES];
     Move m;
     int movecount = board.gen_moves(movelist, (char)-1);
 

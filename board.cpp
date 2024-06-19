@@ -551,7 +551,7 @@ seed must be set before this is called.
    A random legal move
 */
 Move Board::get_random_move(){
-   Move arr[64];
+   Move arr[MAX_MOVES];
    gen_moves(arr, (char)-1);
    int index = rand() % legal_move_count;
    return arr[index];
