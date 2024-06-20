@@ -232,10 +232,10 @@ void Board::undo(Move move, uint32_t previous_kings) {
       taken &= taken - 1;
    }
 
-   bb.pieces[bb.stm] |= taken;
+   bb.pieces[bb.stm] |= move.taken_bb;
    bb.kings |= previous_kings;
-   bb.pieces[!bb.stm] |= S[from];
    bb.pieces[!bb.stm] ^= S[to];
+   bb.pieces[!bb.stm] |= S[from];
 
    if (move.is_promo) {
       bb.kings ^= S[to];
