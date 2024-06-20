@@ -627,7 +627,7 @@ Move cpu::time_search(Board &board, double t_limit, bool feedback){
     
     if (feedback){
         std::cout << "The best move has a value of " << (double)val/75 << ", max depth reached was " << current_depth - 1;
-        std::cout << ", time elapsed: " << get_time() - search_start << " milliseconds\n";
+        std::cout << ", time elapsed: " << (int)(get_time() - search_start) << " milliseconds\n";
         std::cout << "Nodes Traversed: " << nodes_traversed << "\n";
     }
     return move_to_make;

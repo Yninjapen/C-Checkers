@@ -23,7 +23,7 @@ class cpu{
         int current_depth;
         int color;
         unsigned long nodes_traversed;
-        double time_limit;
+        uint64_t time_limit;
         tt_table table;
         tt_eval_table eval_table;
 
@@ -52,7 +52,7 @@ class cpu{
                                         square_map[29] | square_map[30] | square_map[31];
         const uint32_t CENTER_8 = square_map[9] | square_map[10] | square_map[13] | square_map[14] | square_map[17] | square_map[18] | 
                                         square_map[21] | square_map[22];
-        double search_start = time(NULL);
+        uint64_t search_start = time(NULL);
         bool search_cancelled = false;
         Move move_to_make;
 

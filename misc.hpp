@@ -46,4 +46,4 @@ inline uint32_t southFill(uint32_t bb){
 uint32_t square_to_binary(const int square);
 std::vector<int> serialize_bb(uint32_t bb);
 void print_binary(uint32_t num);
-double get_time();
+uint64_t get_time();
