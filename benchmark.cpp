@@ -5,7 +5,7 @@
 #include <cstdint>
 
 // Source: https://www.aartbik.com/MISC/checkers.html
-const uint64_t VERIFICATION_NUMS[16] = {1, 7, 49, 302, 1469, 7361, 36768, 179740, 845931, 3963680, 18391564, 85242128, 388623673, 1766623630, 7978439499, 36263167175};
+const uint64_t VERIFICATION_NUMS[18] = {1, 7, 49, 302, 1469, 7361, 36768, 179740, 845931, 3963680, 18391564, 85242128, 388623673, 1766623630, 7978439499, 36263167175, 165629569428, 758818810990};
 int capture_arr[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 struct Perft_tt_entry {
@@ -74,10 +74,6 @@ uint64_t Perft(Board board, int depth, int ply) {
 
     for (int i = 0; i < movecount; i++) {
         Move move = movelist[i];
-        if (move.captures) {
-            capture_arr[move.captures - 1]++;
-            if (move.captures >= 5) board.print();
-        }
 
         prev_kings = board.bb.kings;
         board.push_move(move);
