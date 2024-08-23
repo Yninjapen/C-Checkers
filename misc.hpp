@@ -7,6 +7,10 @@
 #include <chrono>
 #include <nmmintrin.h>
 
+#define COLOR_RESET "\033[0m"
+#define COLOR_RED "\033[31m"
+#define COLOR_BLUE "\033[34m"
+
 //returns the number of 1 bits in a bitboard
 //aka the "Hamming Weight"
 inline int count_bits(uint32_t bb)

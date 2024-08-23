@@ -35,13 +35,8 @@ Board::Board() {
 
 /* Prints a representation of the board to the console */
 void Board::print() {
-   char arr[32] = {' '};
    char piece_reps[5] = {'b', 'w', 'B', 'W', '-'};
-
-   for (int i = 0; i <=32; i++){
-      ePieceType pt = bb.piece_on_square(i);
-      arr[i] = piece_reps[pt];
-   }
+   std::string piece_colors[5] = {COLOR_BLUE, COLOR_RED, COLOR_BLUE, COLOR_RED, COLOR_RESET};
 
    for (int i = 31; i >= 0; i-=4){
       double num = i;
@@ -52,17 +47,17 @@ void Board::print() {
       }
 
       for (int x = 3; x >= 0; x--){
-         std::cout << arr[i - x] << "   ";
-         if (!arr[i - x]){
-            std::cout << " ";
-         }
+         ePieceType pt = bb.piece_on_square(i - x);
+         std::cout << piece_colors[pt] + piece_reps[pt] + COLOR_RESET << "   ";
       }
       std::cout << "   ";
       for (int x = 3; x >= 0; x--){
+         std::string num_string = std::to_string(i - x);
          if (i - x < 10){
-            std::cout << "0";
+            num_string = "0" + num_string;
          }
-         std::cout << i - x<< "  ";
+
+         std::cout << piece_colors[bb.piece_on_square(i - x)] + num_string + COLOR_RESET << "  ";
       }
    }
    std::cout << "\n";
