@@ -1,4 +1,4 @@
-CFLAGS = -march=native -Wall -O
+CFLAGS = -march=native -Wall -O3 -funroll-loops
 
 game: 
 	g++ $(CFLAGS) -o checkers main.cpp misc.cpp transposition.cpp board.cpp cpu.cpp
