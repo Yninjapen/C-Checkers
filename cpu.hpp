@@ -35,10 +35,6 @@ class cpu{
         
         void set_color(int new_color);
         void set_depth(int new_depth);
-        void close_tables() {
-            table.close();
-            eval_table.close();
-        }
 
     private:
         Move killers[1024][2];

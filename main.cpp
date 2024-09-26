@@ -97,6 +97,4 @@ int main(){
     }
 
     board.print();
-    cpu1.close_tables();
-    cpu2.close_tables();
 }

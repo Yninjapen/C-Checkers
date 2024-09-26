@@ -53,7 +53,7 @@ struct Perft_tt_table {
         phashe->nodes = nodes;
         phashe->depth = depth;
     }
-    void close() {
+    ~Perft_tt_table() {
         free(tt);
     }
 } table;
@@ -122,5 +122,4 @@ int main() {
         std::cout << "\n" << (int)(actual_nodes/elapsed) << " KNodes/s\n";
     else
         std::cout << "Test completed too fast for accurate speed results.\n";
-    table.close();
 }
