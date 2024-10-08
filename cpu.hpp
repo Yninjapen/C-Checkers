@@ -29,7 +29,7 @@ class cpu{
 
         cpu(int cpu_color = 0, int cpu_depth = 10);
         Move max_depth_search(Board &board, bool feedback = true);
-        Move time_search(Board &board, double t_limit, bool feedback = true);
+        Move time_search(Board board, double t_limit, bool feedback = true);
         int search_root(Board &board, int depth, int alpha, int beta);
         int search(Board &board, int depth, int ply, int alpha, int beta, int is_pv);
         
@@ -62,7 +62,7 @@ class cpu{
 
         int mobility_score(Bitboards board);
         int past_pawns(Bitboards board);
-        int eval(Board board);
+        int eval(Board &board);
         int draw_eval(Board &board);
         void set_killers(Move m, int ply);
         void age_history_table();

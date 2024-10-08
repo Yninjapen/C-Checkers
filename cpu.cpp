@@ -121,7 +121,7 @@ int cpu::past_pawns(Bitboards board){
 }
 
 /* returns the cpu's evaluation of the position */
-int cpu::eval(Board board){
+int cpu::eval(Board &board){
     int probeval = eval_table.probe(board.hash_key);
     if (probeval != INVALID){
         return probeval;
@@ -208,6 +208,7 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
     int reduction_depth = 0;
     int moves_tried = 0;
     int new_depth;
+    uint32_t prev_kings;
 
     Move movelist[MAX_MOVES];
     Move current_move;
@@ -254,6 +255,7 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
     int movecount = board.gen_moves(movelist, tt_move_index);
     set_move_scores(movelist, movecount, ply);
     bestmove = movelist[0].id;
+    prev_kings = board.bb.kings;
 
     if (depth < 3
         && !is_pv
@@ -270,11 +272,10 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
 
     /* Loop through all the moves */
     for (int i = 0; i < movecount; i++){
-        Board board2(board);
         order_moves(movecount, movelist, i);
         current_move = movelist[i];
 
-        board2.push_move(current_move);
+        board.push_move(current_move);
 
         int start = current_move.from;
         int end = current_move.to;
@@ -304,19 +305,22 @@ int cpu::search(Board &board, int depth, int ply, int alpha, int beta, int is_pv
 
         /* Principle Variation Search */
         if (!raised_alpha){
-            val = -search(board2, new_depth, ply + 1, -beta, -alpha, is_pv);
+            val = -search(board, new_depth, ply + 1, -beta, -alpha, is_pv);
         }
         else{
-            if (-search(board2, new_depth, ply+1, -alpha - 1, -alpha, NO_PV) > alpha){
-                val = -search(board2, new_depth, ply+1, -beta, -alpha, IS_PV);
+            if (-search(board, new_depth, ply+1, -alpha - 1, -alpha, NO_PV) > alpha){
+                val = -search(board, new_depth, ply+1, -beta, -alpha, IS_PV);
             }
         }
+
 
         if (reduction_depth && val > alpha){
             new_depth += reduction_depth;
             reduction_depth = 0;
             goto re_search;
         }
+
+        board.undo(current_move, prev_kings);
 
         if (search_cancelled) return 0;
 
@@ -381,6 +385,7 @@ int cpu::quiesce(Board &board, int ply, int alpha, int beta){
     /* Generate legal moves*/
     Move movelist[MAX_MOVES];
     int movecount = board.gen_moves(movelist, (char)-1);
+    uint32_t prev_kings = board.bb.kings;
 
     /* Check if the game is over */
     if (!movecount){
@@ -389,9 +394,10 @@ int cpu::quiesce(Board &board, int ply, int alpha, int beta){
 
     /* Never end on a position where there is a forced move */
     else if (movecount == 1){
-        Board board2(board);
-        board2.push_move(movelist[0]);
-        return -quiesce(board2, ply + 1, -beta, -alpha);
+        board.push_move(movelist[0]);
+        int val = -quiesce(board, ply + 1, -beta, -alpha);
+        board.undo(movelist[0], prev_kings);
+        return val;
     }
 
     /* Get an evaluation of the current position.*/
@@ -409,11 +415,11 @@ int cpu::quiesce(Board &board, int ply, int alpha, int beta){
         /* If the current move is not a take or a promotion, we do not worry about it */
         if (!(movelist[i].captures || movelist[i].is_promo)) continue;
 
-        Board board2(board);
+        board.push_move(movelist[i]);
 
-        board2.push_move(movelist[i]);
+        val = -quiesce(board, ply + 1, -beta, -alpha);
 
-        val = -quiesce(board2, ply + 1, -beta, -alpha);
+        board.undo(movelist[i], prev_kings);
 
         if (search_cancelled) return 0;
 
@@ -431,14 +437,14 @@ int cpu::search_root(Board &board, int depth, int alpha, int beta){
     int movecount = board.gen_moves(movelist, bestmove);
     int val = 0;
     int best = -MAX_VAL;
+    uint32_t prev_kings = board.bb.kings;
 
     for (int i = 0; i < movecount; i++){
-        Board board2(board);
 
         /* Puts the current best move at the front of the movelist */
         order_moves(movecount, movelist, i);
 
-        board2.push_move(movelist[i]);
+        board.push_move(movelist[i]);
 
         cutoff[movelist[i].color()][movelist[i].from][movelist[i].to] -= 1;
 
@@ -449,20 +455,22 @@ int cpu::search_root(Board &board, int depth, int alpha, int beta){
         Note: Move ordering must be very good for this to be effective.
         */
         if (best == -MAX_VAL){
-            val = -search(board2, depth - 1, 0, -beta, -alpha, IS_PV);
+            val = -search(board, depth - 1, 0, -beta, -alpha, IS_PV);
         }
         else{
             /* If we're not looking at the first move, we search with a reduced window.*/
-            if (-search(board2, depth - 1, 0, -alpha - 1, -alpha, NO_PV) > alpha){
+            if (-search(board, depth - 1, 0, -alpha - 1, -alpha, NO_PV) > alpha){
 
                 /*
                 If for some reason this search yields a value better than what we already have,
                 we can no longer assume that the first move was the best one, so we must search again
                 with the full window.
                 */
-                val = -search(board2, depth - 1, 0, -beta, -alpha, IS_PV);
+                val = -search(board, depth - 1, 0, -beta, -alpha, IS_PV);
             }
         }
+
+        board.undo(movelist[i], prev_kings);
 
         if (val > best) best = val;
 
@@ -607,7 +615,7 @@ void cpu::order_moves(int movecount, Move * m, int current){
 /*
 Finds the best move, but is limited by a time limit t(seconds)
 */
-Move cpu::time_search(Board &board, double t_limit, bool feedback){
+Move cpu::time_search(Board board, double t_limit, bool feedback){
     Move movelist[MAX_MOVES];
     board.gen_moves(movelist, (char)-1);
     move_to_make = movelist[0];

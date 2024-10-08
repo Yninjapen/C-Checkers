@@ -60,11 +60,10 @@ struct Perft_tt_table {
 
 uint64_t actual_nodes;
 
-uint64_t Perft(Board board, int depth, int ply) {
+uint64_t Perft(Board& board, int depth, int ply) {
     actual_nodes++;
     Move movelist[MAX_MOVES];
     uint64_t nodes, sumnodes = 0;
-    uint32_t prev_kings = 0;
 
     uint64_t probeval = table.probe(board.hash_key, depth);
 
@@ -75,10 +74,11 @@ uint64_t Perft(Board board, int depth, int ply) {
     int movecount = board.gen_moves(movelist, -1);
     if (depth <= 1) return (depth > 0)? movecount:1;
 
+    uint32_t prev_kings = board.bb.kings;
+
     for (int i = 0; i < movecount; i++) {
         Move move = movelist[i];
 
-        prev_kings = board.bb.kings;
         board.push_move(move);
 
         nodes = Perft(board, depth - 1, ply + 1);
