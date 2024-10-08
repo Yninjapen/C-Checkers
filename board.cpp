@@ -146,7 +146,7 @@ Plays a move on the board
 @param move 
    The move to be played
 */
-void Board::push_move(Move move) {
+void Board::push_move(Move &move) {
    uint8_t to = move.to;
    uint8_t from = move.from;
    uint32_t taken = move.taken_bb;
@@ -203,7 +203,7 @@ Undoes a move
 @param previous_kings 
    The king bitboard from the previous position
 */
-void Board::undo(Move move, uint32_t previous_kings) {
+void Board::undo(Move &move, uint32_t previous_kings) {
    if (reversible_moves) reversible_moves--;
 
    uint8_t to = move.to;
@@ -561,7 +561,8 @@ Note that the random seed must be set before calling this method.
 */
 void Board::set_random_pos(int moves_to_play){
    for (int i = 0; i < moves_to_play; i++){
-      push_move(get_random_move());
+      Move m = get_random_move();
+      push_move(m);
    }
 }
 

@@ -194,8 +194,8 @@ struct Board {
         Move get_random_move();
         void set_random_pos(int moves_to_play);
 
-        void push_move(Move move);
-        void undo(Move move, uint32_t previous_kings);
+        void push_move(Move &move);
+        void undo(Move &move, uint32_t previous_kings);
         int gen_moves(Move * external_movelist, uint8_t tt_move);
         int check_win() const;
         bool check_repetition() const;
