@@ -18,7 +18,7 @@ int main(){
     bool is_depth_search = true;
     bool is_cpu_game = false;
 
-    std::cout << "Play as Red(0) or Black(1) (or 2 to have the cpu play itself): ";
+    std::cout << "Play as Black(0) or White(1) (or 2 to have the cpu play itself): ";
     std::cin >> player_color;
     std::cout << "\nTime Search(0) or Depth Search(1)?: ";
     std::cin >> is_depth_search;
